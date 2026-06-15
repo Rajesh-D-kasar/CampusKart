@@ -1,7 +1,9 @@
 function Footer() {
   return (
-    <footer>
-      <p>© 2026 CampusKart. All rights reserved.</p>
+    <footer className="site-footer">
+      <div className="container">
+        <p>© 2026 CampusKart. Daily essentials, delivered simply.</p>
+      </div>
     </footer>
   );
 }

@@ -1,13 +1,19 @@
-function ProductCard({ name, price, image }) {
+function ProductCard({ product, onAdd }) {
   return (
-    <div>
-      <img src={image} alt={name} width="120" />
-
-      <h3>{name}</h3>
-      <p>₹{price}</p>
-
-      <button>Add to Cart</button>
-    </div>
+    <article className="product-card">
+      <div className="product-icon" aria-hidden="true">
+        {product.icon}
+      </div>
+      <span className="product-category">{product.category}</span>
+      <h3>{product.name}</h3>
+      <p className="product-unit">{product.unit}</p>
+      <div className="product-card-footer">
+        <strong>₹{product.price}</strong>
+        <button className="button button-small" onClick={() => onAdd(product)}>
+          Add
+        </button>
+      </div>
+    </article>
   );
 }
 

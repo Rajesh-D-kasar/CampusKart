@@ -1,0 +1,1 @@
+"""CampusKart backend package."""

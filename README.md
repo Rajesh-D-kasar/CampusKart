@@ -1,34 +1,51 @@
-# blinkit_clone
-Full-stack Blinkit-like quick commerce app for groceries and instant local delivery.
+# CampusKart
 
-# Blinkit Clone - Quick Commerce Platform
+CampusKart is a Blinkit-inspired quick-commerce project for browsing campus
+essentials, searching the catalog, and managing a persistent shopping cart.
 
-This is a full-stack quick commerce platform inspired by Blinkit.
+## Current Features
 
-The project allows users to browse groceries and daily essentials, add items to cart, place orders, and track delivery status.
+- Responsive React interface with page routing
+- Product catalog loaded from FastAPI
+- Product search
+- Add, remove, and update cart quantities
+- Cart persistence in browser storage
+- Automatic subtotal and delivery-fee calculation
+- FastAPI health and product endpoints
+- Frontend cart tests and backend API tests
 
-## Features
+Authentication, checkout, database persistence, admin tools, and payments are
+planned but are not presented as complete yet.
 
-- User login and signup
-- Product listing
-- Category-wise products
-- Search and filter
-- Add to cart
-- Place order
-- Order tracking
-- Admin dashboard
-- Product management
-- Inventory management
-- Delivery partner panel
+## Run the Backend
 
-## Tech Stack
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload
+```
 
-- Frontend: React.js / HTML / CSS / JavaScript
-- Backend: FastAPI / Python
-- Database: MongoDB / PostgreSQL
-- Authentication: JWT
-- Payment: Razorpay Test Mode
+## Run the Frontend
 
-## Project Status
+In another terminal:
 
-Currently under development.
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`.
+
+## Verify
+
+```powershell
+cd frontend
+npm test
+npm run build
+
+cd ..\backend
+.\.venv\Scripts\python.exe -m pytest
+```
