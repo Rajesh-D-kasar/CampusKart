@@ -15,5 +15,32 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://campuskart:campuskart@database:5432/campuskart
+      JWT_SECRET_KEY: change-this-dev-secret-before-production
+      CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
+      ALLOWED_HOSTS: '["localhost","127.0.0.1","backend"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: http://127.0.0.1:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
 volumes:
   campuskart_postgres_data:

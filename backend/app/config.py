@@ -16,6 +16,10 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+    allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
+    razorpay_key_id: str | None = None
+    razorpay_key_secret: str | None = None
+    razorpay_webhook_secret: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -2,8 +2,8 @@
 
 FastAPI backend for the CampusKart quick-commerce app. It handles catalog,
 offers, coupon previews, authentication, cart sync, addresses, checkout, mock
-payments, ETA tracking, orders, inventory reservation, and admin catalog/store
-operations.
+payments, Razorpay-ready payment hooks, ETA tracking, orders, inventory
+reservation, delivery operations, and admin catalog/store operations.
 
 ## Stack
 
@@ -15,6 +15,8 @@ operations.
 - Argon2 password hashing
 - SQLite for local one-click development
 - PostgreSQL support through Docker Compose
+- Razorpay order/signature verification hooks
+- Trusted host middleware and security response headers
 
 ## Setup
 
@@ -86,6 +88,16 @@ Email: admin@campuskart.com
 Password: AdminPass123
 ```
 
+And three local delivery partner accounts:
+
+```text
+delivery1@campuskart.com / DeliveryPass123
+delivery2@campuskart.com / DeliveryPass123
+delivery3@campuskart.com / DeliveryPass123
+```
+
+Delivery partners can use `/delivery` after an order is confirmed or packing.
+
 ## API
 
 | Area | Endpoints |
@@ -97,6 +109,8 @@ Password: AdminPass123
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
+| Delivery | `GET /delivery/orders`, `PATCH /delivery/orders/{id}/status` |
+| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify` |
 | Admin | `GET /admin/summary`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 Interactive docs:
@@ -104,6 +118,23 @@ Interactive docs:
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+## Environment
+
+Important settings:
+
+```text
+DATABASE_URL=sqlite:///./dev.db
+JWT_SECRET_KEY=replace-this-secret
+CORS_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
+ALLOWED_HOSTS=["localhost","127.0.0.1","testserver"]
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+```
+
+`postgres://` and `postgresql://` URLs are normalized to the psycopg SQLAlchemy
+driver form automatically for common hosting providers.
 
 ## Tests
 
@@ -116,5 +147,5 @@ Tests use an isolated SQLite database and do not alter local development data.
 Current expected result:
 
 ```text
-34 passed
+39 passed
 ```

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: campuskart-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["https://campuskart-web.onrender.com"]'
+      - key: ALLOWED_HOSTS
+        value: '["campuskart-api.onrender.com","localhost","127.0.0.1"]'
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  - type: web
+    name: campuskart-web
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    envVars:
+      - key: VITE_API_URL
+        value: https://campuskart-api.onrender.com

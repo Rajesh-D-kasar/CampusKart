@@ -31,6 +31,11 @@ function Navbar() {
                   Admin
                 </NavLink>
               )}
+              {(user.role === "delivery_partner" || user.role === "admin") && (
+                <NavLink className={navClassName} to="/delivery">
+                  Delivery
+                </NavLink>
+              )}
               <span className="nav-user">Hi, {user.full_name.split(" ")[0]}</span>
               <button className="nav-button" onClick={logout}>
                 Logout

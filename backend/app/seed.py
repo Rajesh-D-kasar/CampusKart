@@ -22,6 +22,27 @@ ADMIN_USER = {
     "phone": "9000000000",
 }
 
+DELIVERY_USERS = [
+    {
+        "email": "delivery1@campuskart.com",
+        "password": "DeliveryPass123",
+        "full_name": "Aman Delivery",
+        "phone": "9000011101",
+    },
+    {
+        "email": "delivery2@campuskart.com",
+        "password": "DeliveryPass123",
+        "full_name": "Rohit Runner",
+        "phone": "9000011102",
+    },
+    {
+        "email": "delivery3@campuskart.com",
+        "password": "DeliveryPass123",
+        "full_name": "Priya Express",
+        "phone": "9000011103",
+    },
+]
+
 CATEGORIES = [
     {"name": "Fruits", "slug": "fruits", "display_order": 1},
     {"name": "Vegetables", "slug": "vegetables", "display_order": 2},
@@ -385,6 +406,31 @@ def seed_catalog(db: Session) -> None:
         admin.password_hash = hash_password(ADMIN_USER["password"])
         admin.role = UserRole.ADMIN
         admin.is_active = True
+
+    for delivery_data in DELIVERY_USERS:
+        delivery_user = db.scalar(
+            select(User).where(User.email == delivery_data["email"])
+        )
+        if delivery_user is None:
+            delivery_user = db.scalar(
+                select(User).where(User.phone == delivery_data["phone"])
+            )
+        if delivery_user is None:
+            delivery_user = User(
+                email=delivery_data["email"],
+                password_hash=hash_password(delivery_data["password"]),
+                full_name=delivery_data["full_name"],
+                phone=delivery_data["phone"],
+                role=UserRole.DELIVERY_PARTNER,
+            )
+            db.add(delivery_user)
+        else:
+            delivery_user.email = delivery_data["email"]
+            delivery_user.full_name = delivery_data["full_name"]
+            delivery_user.phone = delivery_data["phone"]
+            delivery_user.password_hash = hash_password(delivery_data["password"])
+            delivery_user.role = UserRole.DELIVERY_PARTNER
+            delivery_user.is_active = True
 
     store = db.scalar(select(Store).where(Store.slug == DEFAULT_STORE["slug"]))
     if store is None:

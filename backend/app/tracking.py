@@ -46,16 +46,19 @@ ETA_MINUTES_BY_STATUS = {
 DELIVERY_PARTNERS = [
     {
         "name": "Aman Delivery",
+        "email": "delivery1@campuskart.com",
         "phone": "+91 90000 11101",
         "vehicle_number": "MH 12 CK 2041",
     },
     {
         "name": "Rohit Runner",
+        "email": "delivery2@campuskart.com",
         "phone": "+91 90000 11102",
         "vehicle_number": "MH 12 CK 3198",
     },
     {
         "name": "Priya Express",
+        "email": "delivery3@campuskart.com",
         "phone": "+91 90000 11103",
         "vehicle_number": "MH 12 CK 4427",
     },
@@ -97,6 +100,11 @@ def delivery_partner(order: Order) -> dict[str, str] | None:
     if order_status(order) not in PARTNER_STATUSES or order.id is None:
         return None
     return DELIVERY_PARTNERS[order.id % len(DELIVERY_PARTNERS)]
+
+
+def assigned_partner_email(order: Order) -> str | None:
+    partner = delivery_partner(order)
+    return partner["email"] if partner else None
 
 
 def tracking_message(order: Order) -> str:

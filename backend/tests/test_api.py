@@ -2,7 +2,11 @@ from app.seed import CATEGORIES, PRODUCTS
 
 
 def test_health_checks(client) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+    response = client.get("/health")
+
+    assert response.json() == {"status": "ok"}
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
     assert client.get("/health/database").json() == {
         "status": "ok",
         "database": "reachable",

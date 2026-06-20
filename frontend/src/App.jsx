@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import DeliveryDashboard from "./pages/DeliveryDashboard";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import MyOrders from "./pages/MyOrders";
@@ -22,6 +23,7 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/delivery" element={<DeliveryDashboard />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/orders/:orderId" element={<OrderConfirmation />} />
           <Route path="/login" element={<Login />} />

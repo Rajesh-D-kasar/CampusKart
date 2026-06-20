@@ -1099,6 +1099,104 @@ button.category-card {
   line-height: 1.5;
 }
 
+.delivery-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.delivery-stats-grid article {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid #dbe8d4;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f5fff1, #ffffff);
+}
+
+.delivery-stats-grid span,
+.delivery-address-card span {
+  color: #657066;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.delivery-stats-grid strong {
+  color: #102314;
+  font-size: 2rem;
+}
+
+.delivery-board-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.delivery-order-card {
+  gap: 20px;
+}
+
+.delivery-order-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.delivery-order-header h2 {
+  margin: 4px 0;
+}
+
+.delivery-order-header p {
+  margin: 0;
+  color: #667166;
+}
+
+.delivery-address-card,
+.delivery-items-list {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #edf1e9;
+  border-radius: 16px;
+  background: #fbfdf9;
+}
+
+.delivery-address-card p,
+.delivery-address-card small {
+  margin: 0;
+  color: #657066;
+  line-height: 1.5;
+}
+
+.delivery-items-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #edf1e9;
+}
+
+.delivery-items-list div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.delivery-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.compact-status-card {
+  padding: 10px 14px;
+  color: #1f8f3a;
+  font-weight: 900;
+}
+
 .order-item-row {
   display: flex;
   align-items: center;
@@ -1575,11 +1673,13 @@ button.category-card {
   }
 
   .delivery-panel-header,
+  .delivery-stats-grid,
   .delivery-meta-grid {
     grid-template-columns: 1fr;
   }
 
-  .delivery-panel-header {
+  .delivery-panel-header,
+  .delivery-order-header {
     align-items: stretch;
     flex-direction: column;
   }

@@ -244,6 +244,43 @@ class OrderOut(OrderSummaryOut):
     updated_at: datetime
 
 
+class DeliveryOrderOut(OrderOut):
+    customer_name: str
+    customer_email: EmailStr
+    customer_phone: str | None
+    delivery_city: str | None
+
+
+class DeliveryOrderStatusUpdate(BaseModel):
+    status: Literal["out_for_delivery", "delivered"]
+
+
+class RazorpayOrderCreate(BaseModel):
+    amount: float = Field(gt=0, le=500_000)
+    currency: str = Field(default="INR", min_length=3, max_length=3, pattern="^[A-Z]{3}$")
+    receipt: str | None = Field(default=None, max_length=40)
+    notes: dict[str, str] | None = None
+
+
+class RazorpayOrderOut(BaseModel):
+    provider: str = "razorpay"
+    order_id: str
+    amount: float = Field(gt=0)
+    currency: str
+    key_id: str
+
+
+class RazorpayVerifyRequest(BaseModel):
+    razorpay_order_id: str = Field(min_length=1, max_length=100)
+    razorpay_payment_id: str = Field(min_length=1, max_length=100)
+    razorpay_signature: str = Field(min_length=20, max_length=200)
+
+
+class RazorpayVerifyOut(BaseModel):
+    provider: str = "razorpay"
+    verified: bool
+
+
 class AdminSummaryOut(BaseModel):
     total_orders: int = Field(ge=0)
     open_orders: int = Field(ge=0)

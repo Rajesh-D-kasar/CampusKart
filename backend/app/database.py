@@ -18,7 +18,16 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
+def normalize_database_url(database_url: str) -> str:
+    if database_url.startswith("postgres://"):
+        return database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
 def create_database_engine(database_url: str):
+    database_url = normalize_database_url(database_url)
     connect_args = (
         {"check_same_thread": False} if database_url.startswith("sqlite") else {}
     )
