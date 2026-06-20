@@ -92,6 +92,25 @@ class User(TimestampMixin, Base):
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
 
 
+class AuthOtpCode(TimestampMixin, Base):
+    __tablename__ = "auth_otp_codes"
+    __table_args__ = (
+        Index("ix_auth_otp_email_created", "email", "created_at"),
+        Index("ix_auth_otp_email_consumed", "email", "consumed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    code_hash: Mapped[str] = mapped_column(String(128))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    resend_available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    consumed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    request_ip: Mapped[Optional[str]] = mapped_column(String(64))
+    user_agent: Mapped[Optional[str]] = mapped_column(String(255))
+
+
 class Address(TimestampMixin, Base):
     __tablename__ = "addresses"
     __table_args__ = (

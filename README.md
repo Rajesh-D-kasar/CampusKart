@@ -19,6 +19,7 @@ run locally, but structured like a real commerce system.
   orders, and order items
 - Alembic migrations for database schema management
 - JWT authentication with password hashing
+- Customer OTP login with expiry, resend cooldown, attempt limits, and optional SMTP delivery
 - Guest cart in browser storage and authenticated cart sync after login
 - Address CRUD for checkout
 - Cash-on-delivery plus mock UPI/card payment flows
@@ -43,6 +44,7 @@ run locally, but structured like a real commerce system.
 | Database | SQLite for one-click local run, PostgreSQL-ready via Docker Compose |
 | Migrations | Alembic |
 | Auth | JWT, Argon2 password hashing |
+| OTP | Hashed email OTP, SMTP-ready delivery, dev-mode test code |
 | Tests | Pytest, Node test runner |
 | Deployment | Docker, Nginx static frontend, Render/Vercel-ready config |
 
@@ -200,6 +202,7 @@ VITE_API_URL=https://your-api-domain.example
 | Products | `GET /products`, `GET /products/categories`, `GET /products/{id}` |
 | Offers | `GET /offers`, `POST /offers/coupons/preview` |
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
+| OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
@@ -248,6 +251,28 @@ backend also exposes Razorpay-ready endpoints:
 
 Copy `backend/.env.example` to `backend/.env` and fill the Razorpay variables
 before using real gateway calls.
+
+## Customer OTP Login
+
+Customers can login or create an account using email OTP from `/login`.
+
+- OTP is stored as a hash, not plain text.
+- OTP expires after `OTP_EXPIRE_MINUTES`.
+- Resend is limited by `OTP_RESEND_COOLDOWN_SECONDS`.
+- Incorrect attempts are limited by `OTP_MAX_ATTEMPTS`.
+- OTP login is customer-only; shop owner and delivery accounts still use
+  password login.
+
+In local development the OTP is shown on the login page for easy testing. In
+production, configure SMTP:
+
+```text
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+OTP_EMAIL_FROM=no-reply@example.com
+```
 
 ## Test Data
 

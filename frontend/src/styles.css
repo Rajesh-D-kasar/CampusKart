@@ -1601,6 +1601,37 @@ button.category-card {
   padding: 30px;
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid #dbe3d7;
+  border-radius: 14px;
+  background: #f7faf4;
+}
+
+.auth-tabs button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  color: #526150;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.auth-tabs button.active {
+  color: white;
+  background: #1f8f3a;
+  box-shadow: 0 10px 22px rgb(31 143 58 / 18%);
+}
+
+.auth-form-stack {
+  display: grid;
+  gap: 14px;
+}
+
 .auth-card h2 {
   margin: 0;
   font-size: 2rem;
@@ -1616,6 +1647,26 @@ button.category-card {
 
 .auth-card input {
   padding: 0 13px;
+}
+
+.form-success,
+.otp-dev-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.form-success {
+  border: 1px solid #cfe8c6;
+  color: #17612d;
+  background: #f2ffed;
+}
+
+.otp-dev-note {
+  border: 1px dashed #d7c15e;
+  color: #765800;
+  background: #fff9df;
 }
 
 .auth-card a {

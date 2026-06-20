@@ -1,5 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getCurrentUser, loginUser, registerUser } from "../api/authApi";
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  requestOtp,
+  verifyOtp,
+} from "../api/authApi";
 
 const TOKEN_STORAGE_KEY = "campuskart-token";
 const USER_STORAGE_KEY = "campuskart-user";
@@ -61,6 +67,12 @@ export function AuthProvider({ children }) {
       },
       register: async (payload) => {
         const session = await registerUser(payload);
+        saveSession(session);
+        return session.user;
+      },
+      requestLoginOtp: async (payload) => requestOtp(payload),
+      verifyLoginOtp: async (payload) => {
+        const session = await verifyOtp(payload);
         saveSession(session);
         return session.user;
       },

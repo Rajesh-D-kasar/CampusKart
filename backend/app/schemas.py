@@ -110,6 +110,28 @@ class AuthToken(BaseModel):
     user: UserOut
 
 
+class OtpRequest(BaseModel):
+    email: EmailStr
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    phone: str | None = Field(default=None, min_length=7, max_length=20)
+
+
+class OtpRequestOut(BaseModel):
+    email: EmailStr
+    expires_in_seconds: int = Field(gt=0)
+    resend_after_seconds: int = Field(ge=0)
+    delivery_channel: str = "email"
+    message: str
+    development_otp: str | None = None
+
+
+class OtpVerify(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    phone: str | None = Field(default=None, min_length=7, max_length=20)
+
+
 class CartItemCreate(BaseModel):
     product_id: int
     quantity: int = Field(default=1, ge=1, le=99)

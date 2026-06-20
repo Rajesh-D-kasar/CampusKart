@@ -16,6 +16,7 @@ reservation, delivery operations, and admin catalog/store operations.
 - SQLite for local one-click development
 - PostgreSQL support through Docker Compose
 - Razorpay order/signature verification hooks
+- Customer OTP login with expiry, cooldown, attempt limits, and SMTP-ready delivery
 - Trusted host middleware and security response headers
 
 ## Setup
@@ -106,6 +107,7 @@ Delivery partners can use `/delivery` after an order is confirmed or packing.
 | Products | `GET /products`, `GET /products/categories`, `GET /products/{id}` |
 | Offers | `GET /offers`, `POST /offers/coupons/preview` |
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
+| OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
@@ -131,10 +133,22 @@ ALLOWED_HOSTS=["localhost","127.0.0.1","testserver"]
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
+OTP_EXPIRE_MINUTES=5
+OTP_RESEND_COOLDOWN_SECONDS=45
+OTP_MAX_ATTEMPTS=5
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+OTP_EMAIL_FROM=no-reply@campuskart.local
 ```
 
 `postgres://` and `postgresql://` URLs are normalized to the psycopg SQLAlchemy
 driver form automatically for common hosting providers.
+
+In development, OTP responses include `development_otp` so the flow can be
+tested without email. In production, configure SMTP; otherwise OTP requests
+return a clear service-unavailable error instead of pretending to send a code.
 
 ## Tests
 

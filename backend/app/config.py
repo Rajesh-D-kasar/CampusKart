@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     razorpay_key_id: str | None = None
     razorpay_key_secret: str | None = None
     razorpay_webhook_secret: str | None = None
+    otp_expire_minutes: int = 5
+    otp_resend_cooldown_seconds: int = 45
+    otp_max_attempts: int = 5
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    otp_email_from: str = "no-reply@campuskart.local"
 
     model_config = SettingsConfigDict(
         env_file=".env",

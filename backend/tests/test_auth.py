@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import verify_password
-from app.models import Cart, User
+from app.models import AuthOtpCode, Cart, User
 
 
 def register_payload(email: str = "new-user@example.com") -> dict[str, str]:
@@ -80,3 +80,93 @@ def test_me_rejects_invalid_token(client) -> None:
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Could not validate credentials"}
+
+
+def test_otp_flow_creates_customer_and_token(client, db_session: Session) -> None:
+    request_response = client.post(
+        "/auth/otp/request",
+        json={
+            "email": "otp-user@example.com",
+            "full_name": "OTP User",
+            "phone": "9000090000",
+        },
+    )
+    otp = request_response.json()["development_otp"]
+    verify_response = client.post(
+        "/auth/otp/verify",
+        json={
+            "email": "otp-user@example.com",
+            "otp": otp,
+            "full_name": "OTP User",
+            "phone": "9000090000",
+        },
+    )
+    body = verify_response.json()
+    user = db_session.scalar(select(User).where(User.email == "otp-user@example.com"))
+    otp_record = db_session.scalar(
+        select(AuthOtpCode).where(AuthOtpCode.email == "otp-user@example.com")
+    )
+
+    assert request_response.status_code == 200
+    assert len(otp) == 6
+    assert body["access_token"]
+    assert body["user"]["email"] == "otp-user@example.com"
+    assert user is not None
+    assert user.full_name == "OTP User"
+    assert db_session.scalar(select(Cart).where(Cart.user_id == user.id)) is not None
+    assert otp_record is not None
+    assert otp_record.consumed_at is not None
+
+
+def test_otp_rejects_wrong_code_and_blocks_reuse(client) -> None:
+    request_response = client.post(
+        "/auth/otp/request",
+        json={"email": "wrong-otp@example.com", "full_name": "Wrong OTP"},
+    )
+    otp = request_response.json()["development_otp"]
+    wrong_otp = "000001" if otp == "000000" else "000000"
+
+    wrong = client.post(
+        "/auth/otp/verify",
+        json={"email": "wrong-otp@example.com", "otp": wrong_otp},
+    )
+    correct = client.post(
+        "/auth/otp/verify",
+        json={"email": "wrong-otp@example.com", "otp": otp},
+    )
+    reuse = client.post(
+        "/auth/otp/verify",
+        json={"email": "wrong-otp@example.com", "otp": otp},
+    )
+
+    assert wrong.status_code == 400
+    assert wrong.json()["detail"] == "Incorrect OTP"
+    assert correct.status_code == 200
+    assert reuse.status_code == 400
+    assert reuse.json()["detail"] == "OTP not found or already used"
+
+
+def test_otp_request_has_resend_cooldown(client) -> None:
+    payload = {"email": "cooldown@example.com", "full_name": "Cool Down"}
+
+    first = client.post("/auth/otp/request", json=payload)
+    second = client.post("/auth/otp/request", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert "Please wait" in second.json()["detail"]
+
+
+def test_otp_login_is_customer_only(client) -> None:
+    request_response = client.post(
+        "/auth/otp/request",
+        json={"email": "admin@campuskart.com"},
+    )
+    otp = request_response.json()["development_otp"]
+    verify = client.post(
+        "/auth/otp/verify",
+        json={"email": "admin@campuskart.com", "otp": otp},
+    )
+
+    assert verify.status_code == 403
+    assert verify.json()["detail"] == "OTP login is available for customer accounts only"

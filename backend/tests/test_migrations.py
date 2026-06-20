@@ -25,4 +25,5 @@ def test_initial_migration_creates_commerce_tables(tmp_path) -> None:
         "cart_items",
         "orders",
         "order_items",
+        "auth_otp_codes",
     }.issubset(table_names)
