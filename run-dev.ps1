@@ -8,9 +8,11 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendRoot = Join-Path $Root "backend"
 $FrontendRoot = Join-Path $Root "frontend"
 $DeliveryPanelRoot = Join-Path $Root "delivery-panel"
+$ShopOwnerPanelRoot = Join-Path $Root "shop-owner-panel"
 $PythonExe = Join-Path $BackendRoot ".venv\Scripts\python.exe"
 $FrontendUrl = "http://127.0.0.1:5173"
 $DeliveryPanelUrl = "http://127.0.0.1:5174"
+$ShopOwnerPanelUrl = "http://127.0.0.1:5175"
 
 function Write-Step {
     param([string]$Message)
@@ -95,6 +97,10 @@ if (-not (Test-Path $DeliveryPanelRoot)) {
     throw "Delivery panel folder not found: $DeliveryPanelRoot"
 }
 
+if (-not (Test-Path $ShopOwnerPanelRoot)) {
+    throw "Shop owner panel folder not found: $ShopOwnerPanelRoot"
+}
+
 if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "sqlite:///./dev.db"
 }
@@ -154,7 +160,7 @@ Invoke-InDirectory $FrontendRoot {
 
 if ($CheckOnly) {
     Write-Step "Check complete"
-    Write-Host "Backend, frontend, and delivery panel are ready to run." -ForegroundColor Green
+    Write-Host "Backend, frontend, delivery panel, and shop owner panel are ready to run." -ForegroundColor Green
     exit 0
 }
 
@@ -173,6 +179,11 @@ npm.cmd run dev -- --host 127.0.0.1
 
 $deliveryPanelCommand = @"
 Set-Location '$DeliveryPanelRoot'
+npm.cmd run dev
+"@
+
+$shopOwnerPanelCommand = @"
+Set-Location '$ShopOwnerPanelRoot'
 npm.cmd run dev
 "@
 
@@ -197,16 +208,26 @@ else {
     Start-Process powershell.exe -ArgumentList "-NoExit", "-NoProfile", "-Command", $deliveryPanelCommand
 }
 
+if (Test-TcpPort 5175) {
+    Write-Host "Shop owner panel is already running on $ShopOwnerPanelUrl"
+}
+else {
+    Start-Process powershell.exe -ArgumentList "-NoExit", "-NoProfile", "-Command", $shopOwnerPanelCommand
+}
+
 Wait-ForTcpPort 8000 | Out-Null
 Wait-ForTcpPort 5173 | Out-Null
 Wait-ForTcpPort 5174 | Out-Null
+Wait-ForTcpPort 5175 | Out-Null
 Start-Process $FrontendUrl
 Start-Process $DeliveryPanelUrl
+Start-Process $ShopOwnerPanelUrl
 
 Write-Host ""
 Write-Host "CampusKart is starting." -ForegroundColor Green
 Write-Host "Frontend: $FrontendUrl"
 Write-Host "Delivery panel: $DeliveryPanelUrl"
+Write-Host "Shop owner panel: $ShopOwnerPanelUrl"
 Write-Host "Backend docs: http://127.0.0.1:8000/docs"
 Write-Host ""
 Write-Host "Close the PowerShell server windows to stop the app."

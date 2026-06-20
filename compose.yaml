@@ -23,7 +23,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+psycopg://campuskart:campuskart@database:5432/campuskart
       JWT_SECRET_KEY: change-this-dev-secret-before-production
-      CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173","http://localhost:5174","http://127.0.0.1:5174"]'
+      CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173","http://localhost:5174","http://127.0.0.1:5174","http://localhost:5175","http://127.0.0.1:5175"]'
       ALLOWED_HOSTS: '["localhost","127.0.0.1","backend"]'
     ports:
       - "8000:8000"
@@ -38,6 +38,7 @@ services:
       args:
         VITE_API_URL: http://127.0.0.1:8000
         VITE_DELIVERY_PANEL_URL: http://127.0.0.1:5174
+        VITE_SHOP_OWNER_PANEL_URL: http://127.0.0.1:5175
     ports:
       - "5173:80"
     depends_on:
@@ -51,6 +52,17 @@ services:
         VITE_API_URL: http://127.0.0.1:8000
     ports:
       - "5174:80"
+    depends_on:
+      - backend
+
+  shop-owner-panel:
+    build:
+      context: .
+      dockerfile: shop-owner-panel/Dockerfile
+      args:
+        VITE_API_URL: http://127.0.0.1:8000
+    ports:
+      - "5175:80"
     depends_on:
       - backend
 

@@ -7,6 +7,8 @@ function Navbar() {
   const { isAuthenticated, logout, user } = useAuth();
   const deliveryPanelUrl =
     import.meta.env.VITE_DELIVERY_PANEL_URL || "http://127.0.0.1:5174";
+  const shopOwnerPanelUrl =
+    import.meta.env.VITE_SHOP_OWNER_PANEL_URL || "http://127.0.0.1:5175";
   const navClassName = ({ isActive }) => (isActive ? "active" : undefined);
 
   return (
@@ -29,9 +31,7 @@ function Navbar() {
                 Orders
               </NavLink>
               {user.role === "admin" && (
-                <NavLink className={navClassName} to="/admin">
-                  Admin
-                </NavLink>
+                <a href={shopOwnerPanelUrl}>Shop Panel</a>
               )}
               {(user.role === "delivery_partner" || user.role === "admin") && (
                 <a href={deliveryPanelUrl}>

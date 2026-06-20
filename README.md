@@ -29,6 +29,7 @@ run locally, but structured like a real commerce system.
   inventory controls
 - Delivery partner dashboard for assigned deliveries and doorstep status updates
 - Separate delivery partner website at `delivery-panel/`
+- Separate shop owner website at `shop-owner-panel/`
 - Security headers, trusted-host validation, Dockerfiles, and deployment config
 - One-click Windows run script for local development
 - Backend and frontend test coverage
@@ -66,6 +67,7 @@ Useful local URLs:
 
 - App: `http://127.0.0.1:5173`
 - Delivery panel: `http://127.0.0.1:5174`
+- Shop owner panel: `http://127.0.0.1:5175`
 - Backend API: `http://127.0.0.1:8000`
 - API docs: `http://127.0.0.1:8000/docs`
 - Database health: `http://127.0.0.1:8000/health/database`
@@ -117,6 +119,7 @@ Then open:
 
 - App: `http://127.0.0.1:5173`
 - Delivery panel: `http://127.0.0.1:5174`
+- Shop owner panel: `http://127.0.0.1:5175`
 - API docs: `http://127.0.0.1:8000/docs`
 
 ## Core User Flow
@@ -156,6 +159,34 @@ It includes:
 - status buttons for out-for-delivery and delivered
 
 For deployment, set `delivery-panel/.env` or hosting env var:
+
+```text
+VITE_API_URL=https://your-api-domain.example
+```
+
+## Shop Owner Website
+
+The shop owner panel is a separate website in `shop-owner-panel/`. It is made
+for local store owners who need simple, large controls instead of a technical
+admin dashboard.
+
+Local URL:
+
+```text
+http://127.0.0.1:5175
+```
+
+It includes:
+
+- shop owner login
+- order queue with open/new/packing/done/all tabs
+- quick order status buttons
+- low-stock warning list
+- stock quantity and reorder alert updates
+- add product form
+- add category form
+
+For deployment, set `shop-owner-panel/.env` or hosting env var:
 
 ```text
 VITE_API_URL=https://your-api-domain.example
@@ -279,6 +310,11 @@ blinkit_clone/
 |       |-- context/
 |       `-- pages/
 |-- delivery-panel/
+|   |-- Dockerfile
+|   |-- index.html
+|   |-- nginx.conf
+|   `-- src/
+|-- shop-owner-panel/
 |   |-- Dockerfile
 |   |-- index.html
 |   |-- nginx.conf

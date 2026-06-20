@@ -1,0 +1,515 @@
+:root {
+  color: #142315;
+  background: #f5f2e9;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgb(255 190 92 / 25%), transparent 28rem),
+    linear-gradient(135deg, #fffaf0 0%, #f4f8ee 45%, #fff9ee 100%);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.eyebrow,
+.stat-card span,
+.item-code,
+.search-box span,
+.login-card label,
+.form-grid label,
+.catalog-grid label,
+.stock-read span,
+.item-name span {
+  color: #706851;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.login-screen,
+.panel-shell {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 30px;
+  padding: 48px 0;
+}
+
+.login-copy,
+.login-card,
+.panel-card,
+.stat-card {
+  border: 1px solid rgb(70 56 25 / 10%);
+  border-radius: 26px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 22px 70px rgb(75 64 28 / 10%);
+  backdrop-filter: blur(16px);
+}
+
+.login-copy {
+  min-height: 540px;
+  display: grid;
+  align-content: end;
+  gap: 20px;
+  padding: clamp(28px, 6vw, 56px);
+  overflow: hidden;
+  position: relative;
+}
+
+.login-copy::after {
+  content: "";
+  width: 210px;
+  height: 210px;
+  position: absolute;
+  top: 48px;
+  right: 48px;
+  border-radius: 46px;
+  transform: rotate(8deg);
+  background: linear-gradient(135deg, #ffb84d, #1f8f3a);
+  box-shadow:
+    0 0 0 30px rgb(255 184 77 / 12%),
+    0 0 0 62px rgb(31 143 58 / 6%);
+}
+
+.login-copy h1,
+.panel-header h1 {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(2.8rem, 7vw, 6rem);
+  line-height: 0.94;
+  letter-spacing: -0.08em;
+}
+
+.login-copy p,
+.panel-header p,
+.order-card p,
+.empty-card p {
+  max-width: 680px;
+  margin: 0;
+  color: #675f4b;
+  line-height: 1.65;
+}
+
+.feature-pills,
+.header-actions,
+.action-row,
+.stock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.feature-pills span,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: #755016;
+  background: #fff2d9;
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.login-card,
+.panel-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.login-card h2,
+.panel-card h2,
+.order-card h3,
+.empty-card h3 {
+  margin: 0;
+  letter-spacing: -0.05em;
+}
+
+.login-card label,
+.search-box,
+.form-grid label,
+.catalog-grid label {
+  display: grid;
+  gap: 8px;
+  color: #4f4b3f;
+  font-weight: 900;
+}
+
+.login-card input,
+.search-box input,
+.form-grid input,
+.form-grid select,
+.catalog-grid input,
+.inventory-row input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid #ded8c9;
+  border-radius: 14px;
+  color: #142315;
+  background: white;
+  outline: none;
+}
+
+.login-card input:focus,
+.search-box input:focus,
+.form-grid input:focus,
+.form-grid select:focus,
+.catalog-grid input:focus,
+.inventory-row input:focus {
+  border-color: #1f8f3a;
+  box-shadow: 0 0 0 4px rgb(31 143 58 / 12%);
+}
+
+.primary-button,
+.ghost-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.primary-button {
+  color: white;
+  background: #1f8f3a;
+  box-shadow: 0 14px 30px rgb(31 143 58 / 22%);
+}
+
+.ghost-button {
+  border: 1px solid #ded8c9;
+  color: #2b3925;
+  background: white;
+}
+
+.small-button {
+  min-height: 38px;
+}
+
+.danger-button {
+  color: #a23b3b;
+}
+
+.form-error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #f1c9c9;
+  border-radius: 14px;
+  color: #9d3030;
+  background: #fff8f8;
+  line-height: 1.45;
+}
+
+.panel-shell {
+  display: grid;
+  gap: 20px;
+  padding: 34px 0 60px;
+}
+
+.panel-header,
+.section-head,
+.order-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.stat-card strong {
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  letter-spacing: -0.06em;
+}
+
+.work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(270px, 0.6fr);
+  gap: 20px;
+}
+
+.section-head.compact {
+  align-items: center;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tabs button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #ded8c9;
+  border-radius: 999px;
+  color: #5c5848;
+  background: white;
+  font-weight: 900;
+}
+
+.tabs button.active {
+  border-color: #1f8f3a;
+  color: white;
+  background: #1f8f3a;
+}
+
+.orders-list,
+.low-stock-list,
+.inventory-list {
+  display: grid;
+  gap: 12px;
+}
+
+.order-card,
+.inventory-row,
+.low-stock-list article,
+.quiet-card,
+.empty-card {
+  border: 1px solid #eee8d9;
+  border-radius: 18px;
+  background: #fffdf8;
+}
+
+.order-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.order-card small,
+.order-note {
+  color: #706851;
+}
+
+.order-money {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.order-money strong {
+  font-size: 1.25rem;
+}
+
+.status-placed {
+  color: #8a5200;
+  background: #fff5d8;
+}
+
+.status-confirmed,
+.status-packing {
+  color: #17612d;
+  background: #e8f8df;
+}
+
+.status-out_for_delivery {
+  color: #0c5d83;
+  background: #e2f4ff;
+}
+
+.status-delivered {
+  color: #1f7a3c;
+  background: #e3f7e6;
+}
+
+.status-cancelled {
+  color: #a23b3b;
+  background: #ffeaea;
+}
+
+.low-stock-list article,
+.quiet-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px;
+}
+
+.low-stock-list span {
+  color: #a65f00;
+  font-weight: 900;
+}
+
+.inventory-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 100px 120px 120px auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.item-name {
+  display: grid;
+  gap: 5px;
+}
+
+.item-name strong {
+  font-size: 1rem;
+}
+
+.item-name em {
+  width: max-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #9a5c00;
+  background: #fff5d8;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.stock-read {
+  display: grid;
+  gap: 4px;
+}
+
+.stock-read strong {
+  font-size: 1.45rem;
+}
+
+.inventory-row label {
+  display: grid;
+  gap: 6px;
+  color: #4f4b3f;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr;
+  gap: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.empty-card {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 130px;
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 1020px) {
+  .login-screen,
+  .work-grid,
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stock-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .login-screen,
+  .panel-shell {
+    width: min(100% - 22px, 1240px);
+  }
+
+  .login-copy {
+    min-height: 420px;
+  }
+
+  .login-copy::after {
+    width: 140px;
+    height: 140px;
+    top: 28px;
+    right: 24px;
+  }
+
+  .panel-header,
+  .section-head,
+  .order-main {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions,
+  .action-row,
+  .stock-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primary-button,
+  .ghost-button {
+    width: 100%;
+  }
+
+  .stats-grid,
+  .inventory-row,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-money {
+    justify-items: start;
+  }
+}

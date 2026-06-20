@@ -12,7 +12,7 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: '["https://campuskart-web.onrender.com"]'
+        value: '["https://campuskart-web.onrender.com","https://campuskart-delivery.onrender.com","https://campuskart-owner.onrender.com"]'
       - key: ALLOWED_HOSTS
         value: '["campuskart-api.onrender.com","localhost","127.0.0.1"]'
       - key: RAZORPAY_KEY_ID
@@ -29,11 +29,21 @@ services:
         value: https://campuskart-api.onrender.com
       - key: VITE_DELIVERY_PANEL_URL
         value: https://campuskart-delivery.onrender.com
+      - key: VITE_SHOP_OWNER_PANEL_URL
+        value: https://campuskart-owner.onrender.com
 
   - type: web
     name: campuskart-delivery
     env: docker
     dockerfilePath: ./delivery-panel/Dockerfile
+    envVars:
+      - key: VITE_API_URL
+        value: https://campuskart-api.onrender.com
+
+  - type: web
+    name: campuskart-owner
+    env: docker
+    dockerfilePath: ./shop-owner-panel/Dockerfile
     envVars:
       - key: VITE_API_URL
         value: https://campuskart-api.onrender.com

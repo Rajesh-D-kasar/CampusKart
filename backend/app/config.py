@@ -17,6 +17,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
     ]
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     razorpay_key_id: str | None = None

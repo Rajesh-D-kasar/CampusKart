@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CampusKart shop owner panel for local store order, stock, and catalog management."
+    />
+    <title>CampusKart Shop Owner Panel</title>
+  </head>
+  <body>
+    <main id="app">
+      <section class="login-screen" id="login-view">
+        <div class="login-copy">
+          <span class="eyebrow">Dukaan Manager</span>
+          <h1>Shop owner ka simple control room.</h1>
+          <p>
+            Orders accept karo, packing start karo, stock badhao/ghatao, low-stock
+            items dekho, aur naya product add karo. Local dukandar ke liye seedha
+            aur fast panel.
+          </p>
+          <div class="feature-pills">
+            <span>Order queue</span>
+            <span>Stock control</span>
+            <span>Easy catalog</span>
+          </div>
+        </div>
+
+        <form class="login-card" id="login-form">
+          <div>
+            <span class="eyebrow">Owner login</span>
+            <h2>Dukaan kholo</h2>
+          </div>
+          <label>
+            Email
+            <input
+              id="email"
+              type="email"
+              value="admin@campuskart.com"
+              autocomplete="username"
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              id="password"
+              type="password"
+              value="AdminPass123"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <button class="primary-button" type="submit">Open shop panel</button>
+          <p class="form-error" id="login-error" hidden></p>
+        </form>
+      </section>
+
+      <section class="panel-shell" id="panel-view" hidden>
+        <header class="panel-header">
+          <div>
+            <span class="eyebrow">CampusKart Store</span>
+            <h1>Dukaan dashboard</h1>
+            <p id="owner-copy">Aaj ke orders aur stock yahin manage honge.</p>
+          </div>
+          <div class="header-actions">
+            <button class="ghost-button" id="refresh-button" type="button">
+              Refresh
+            </button>
+            <button class="ghost-button danger-button" id="logout-button" type="button">
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <section class="stats-grid" id="stats-grid"></section>
+
+        <section class="work-grid">
+          <section class="panel-card orders-panel">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Order ka kaam</span>
+                <h2>Order queue</h2>
+              </div>
+              <label class="search-box">
+                <span>Search</span>
+                <input id="order-search" type="search" placeholder="Order/customer..." />
+              </label>
+            </div>
+            <div class="tabs" id="order-tabs">
+              <button class="active" data-order-tab="open" type="button">Open</button>
+              <button data-order-tab="placed" type="button">New</button>
+              <button data-order-tab="packing" type="button">Packing</button>
+              <button data-order-tab="done" type="button">Done</button>
+              <button data-order-tab="all" type="button">All</button>
+            </div>
+            <div class="orders-list" id="orders-list"></div>
+          </section>
+
+          <aside class="panel-card low-stock-panel">
+            <div class="section-head compact">
+              <div>
+                <span class="eyebrow">Dhyan dena</span>
+                <h2>Low stock</h2>
+              </div>
+            </div>
+            <div id="low-stock-list" class="low-stock-list"></div>
+          </aside>
+        </section>
+
+        <section class="panel-card inventory-panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Stock control</span>
+              <h2>Inventory</h2>
+            </div>
+            <label class="search-box">
+              <span>Search item</span>
+              <input id="inventory-search" type="search" placeholder="Milk, Apple..." />
+            </label>
+          </div>
+          <div class="inventory-list" id="inventory-list"></div>
+        </section>
+
+        <section class="catalog-grid">
+          <form class="panel-card" id="product-form">
+            <div>
+              <span class="eyebrow">Naya maal</span>
+              <h2>Add product</h2>
+            </div>
+            <div class="form-grid">
+              <label>
+                Category
+                <select id="product-category" required></select>
+              </label>
+              <label>
+                Product name
+                <input id="product-name" placeholder="Example: Fresh Bread" required />
+              </label>
+              <label>
+                Unit
+                <input id="product-unit" placeholder="1 pack" required />
+              </label>
+              <label>
+                Price
+                <input id="product-price" type="number" min="0" step="1" required />
+              </label>
+              <label>
+                MRP
+                <input id="product-mrp" type="number" min="0" step="1" required />
+              </label>
+              <label>
+                Stock
+                <input id="product-stock" type="number" min="0" step="1" value="10" />
+              </label>
+            </div>
+            <button class="primary-button" type="submit">Add product</button>
+          </form>
+
+          <form class="panel-card" id="category-form">
+            <div>
+              <span class="eyebrow">Shelf</span>
+              <h2>Add category</h2>
+            </div>
+            <label>
+              Category name
+              <input id="category-name" placeholder="Example: Bakery" required />
+            </label>
+            <button class="ghost-button" type="submit">Add category</button>
+          </form>
+        </section>
+
+        <p class="form-error" id="panel-error" hidden></p>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
