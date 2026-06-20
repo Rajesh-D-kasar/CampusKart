@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ]
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     razorpay_key_id: str | None = None

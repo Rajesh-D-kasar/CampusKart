@@ -7,8 +7,10 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendRoot = Join-Path $Root "backend"
 $FrontendRoot = Join-Path $Root "frontend"
+$DeliveryPanelRoot = Join-Path $Root "delivery-panel"
 $PythonExe = Join-Path $BackendRoot ".venv\Scripts\python.exe"
 $FrontendUrl = "http://127.0.0.1:5173"
+$DeliveryPanelUrl = "http://127.0.0.1:5174"
 
 function Write-Step {
     param([string]$Message)
@@ -89,6 +91,10 @@ if (-not (Test-Path $FrontendRoot)) {
     throw "Frontend folder not found: $FrontendRoot"
 }
 
+if (-not (Test-Path $DeliveryPanelRoot)) {
+    throw "Delivery panel folder not found: $DeliveryPanelRoot"
+}
+
 if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "sqlite:///./dev.db"
 }
@@ -148,7 +154,7 @@ Invoke-InDirectory $FrontendRoot {
 
 if ($CheckOnly) {
     Write-Step "Check complete"
-    Write-Host "Backend and frontend are ready to run." -ForegroundColor Green
+    Write-Host "Backend, frontend, and delivery panel are ready to run." -ForegroundColor Green
     exit 0
 }
 
@@ -165,6 +171,11 @@ Set-Location '$FrontendRoot'
 npm.cmd run dev -- --host 127.0.0.1
 "@
 
+$deliveryPanelCommand = @"
+Set-Location '$DeliveryPanelRoot'
+npm.cmd run dev
+"@
+
 if (Test-TcpPort 8000) {
     Write-Host "Backend is already running on http://127.0.0.1:8000"
 }
@@ -179,13 +190,23 @@ else {
     Start-Process powershell.exe -ArgumentList "-NoExit", "-NoProfile", "-Command", $frontendCommand
 }
 
+if (Test-TcpPort 5174) {
+    Write-Host "Delivery panel is already running on $DeliveryPanelUrl"
+}
+else {
+    Start-Process powershell.exe -ArgumentList "-NoExit", "-NoProfile", "-Command", $deliveryPanelCommand
+}
+
 Wait-ForTcpPort 8000 | Out-Null
 Wait-ForTcpPort 5173 | Out-Null
+Wait-ForTcpPort 5174 | Out-Null
 Start-Process $FrontendUrl
+Start-Process $DeliveryPanelUrl
 
 Write-Host ""
 Write-Host "CampusKart is starting." -ForegroundColor Green
 Write-Host "Frontend: $FrontendUrl"
+Write-Host "Delivery panel: $DeliveryPanelUrl"
 Write-Host "Backend docs: http://127.0.0.1:8000/docs"
 Write-Host ""
-Write-Host "Close the two PowerShell server windows to stop the app."
+Write-Host "Close the PowerShell server windows to stop the app."

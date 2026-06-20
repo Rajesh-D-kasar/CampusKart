@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CampusKart delivery partner panel for assigned orders and COD collections."
+    />
+    <title>CampusKart Delivery Panel</title>
+  </head>
+  <body>
+    <main id="app">
+      <section class="login-screen" id="login-view">
+        <div class="login-hero">
+          <span class="eyebrow">CampusKart Ops</span>
+          <h1>Delivery partner panel</h1>
+          <p>
+            Login, check assigned drops, call customers, open maps, collect COD,
+            and update order status from one focused screen.
+          </p>
+          <div class="hero-points">
+            <span>Live assigned orders</span>
+            <span>COD collection view</span>
+            <span>Quick status actions</span>
+          </div>
+        </div>
+
+        <form class="login-card" id="login-form">
+          <div>
+            <span class="eyebrow">Partner login</span>
+            <h2>Start your shift</h2>
+          </div>
+          <label>
+            Email
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value="delivery1@campuskart.com"
+              autocomplete="username"
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value="DeliveryPass123"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <button class="primary-button" type="submit">Login to panel</button>
+          <p class="form-error" id="login-error" hidden></p>
+          <div class="demo-logins">
+            <span>Demo partners</span>
+            <button type="button" data-demo-email="delivery1@campuskart.com">
+              Aman
+            </button>
+            <button type="button" data-demo-email="delivery2@campuskart.com">
+              Rohit
+            </button>
+            <button type="button" data-demo-email="delivery3@campuskart.com">
+              Priya
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel-shell" id="panel-view" hidden>
+        <header class="panel-header">
+          <div>
+            <span class="eyebrow">Delivery workspace</span>
+            <h1>Assigned drops</h1>
+            <p id="partner-copy">Ready for today&apos;s deliveries.</p>
+          </div>
+          <div class="header-actions">
+            <button class="ghost-button" id="refresh-button" type="button">
+              Refresh
+            </button>
+            <button class="ghost-button danger-button" id="logout-button" type="button">
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <section class="shift-card">
+          <div>
+            <span class="eyebrow">Shift snapshot</span>
+            <h2 id="shift-title">Good to go</h2>
+            <p id="last-refresh">Not synced yet</p>
+          </div>
+          <div class="cod-tile">
+            <span>COD to collect</span>
+            <strong id="cod-due">₹0</strong>
+          </div>
+        </section>
+
+        <section class="stats-grid" id="stats-grid"></section>
+
+        <section class="toolbar">
+          <div class="tabs" id="tabs">
+            <button class="active" data-tab="active" type="button">Active</button>
+            <button data-tab="pickup" type="button">Pickup queue</button>
+            <button data-tab="road" type="button">On road</button>
+            <button data-tab="done" type="button">Delivered</button>
+          </div>
+          <label class="search-box">
+            <span>Search</span>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Order, customer, city..."
+            />
+          </label>
+        </section>
+
+        <p class="form-error" id="panel-error" hidden></p>
+        <section class="orders-grid" id="orders-grid"></section>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

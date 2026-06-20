@@ -5,6 +5,8 @@ import { useCart } from "../context/CartContext";
 function Navbar() {
   const { itemCount } = useCart();
   const { isAuthenticated, logout, user } = useAuth();
+  const deliveryPanelUrl =
+    import.meta.env.VITE_DELIVERY_PANEL_URL || "http://127.0.0.1:5174";
   const navClassName = ({ isActive }) => (isActive ? "active" : undefined);
 
   return (
@@ -32,9 +34,9 @@ function Navbar() {
                 </NavLink>
               )}
               {(user.role === "delivery_partner" || user.role === "admin") && (
-                <NavLink className={navClassName} to="/delivery">
+                <a href={deliveryPanelUrl}>
                   Delivery
-                </NavLink>
+                </a>
               )}
               <span className="nav-user">Hi, {user.full_name.split(" ")[0]}</span>
               <button className="nav-button" onClick={logout}>

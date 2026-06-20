@@ -8,5 +8,8 @@ backend/.env
 frontend/.env
 frontend/node_modules
 frontend/dist
+delivery-panel/.env
+delivery-panel/node_modules
+delivery-panel/dist
 *.pyc
 *.db

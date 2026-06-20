@@ -28,6 +28,7 @@ run locally, but structured like a real commerce system.
 - Admin dashboard for order status, category management, product editing, and
   inventory controls
 - Delivery partner dashboard for assigned deliveries and doorstep status updates
+- Separate delivery partner website at `delivery-panel/`
 - Security headers, trusted-host validation, Dockerfiles, and deployment config
 - One-click Windows run script for local development
 - Backend and frontend test coverage
@@ -64,6 +65,7 @@ It will:
 Useful local URLs:
 
 - App: `http://127.0.0.1:5173`
+- Delivery panel: `http://127.0.0.1:5174`
 - Backend API: `http://127.0.0.1:8000`
 - API docs: `http://127.0.0.1:8000/docs`
 - Database health: `http://127.0.0.1:8000/health/database`
@@ -114,6 +116,7 @@ docker compose up --build
 Then open:
 
 - App: `http://127.0.0.1:5173`
+- Delivery panel: `http://127.0.0.1:5174`
 - API docs: `http://127.0.0.1:8000/docs`
 
 ## Core User Flow
@@ -130,6 +133,33 @@ Then open:
 10. Admin confirms/updates order status from `/admin`.
 11. Delivery partner opens `/delivery` and marks assigned orders out for
     delivery or delivered.
+
+## Delivery Partner Website
+
+The delivery boy panel is a separate website in `delivery-panel/`. It connects
+to the same FastAPI backend, but runs separately from the customer React app.
+
+Local URL:
+
+```text
+http://127.0.0.1:5174
+```
+
+It includes:
+
+- delivery partner/admin login
+- assigned order list and shift summary
+- active, pickup, on-road, and delivered tabs
+- customer call and map links
+- item checklist
+- COD collection reminders
+- status buttons for out-for-delivery and delivered
+
+For deployment, set `delivery-panel/.env` or hosting env var:
+
+```text
+VITE_API_URL=https://your-api-domain.example
+```
 
 ## API Overview
 
@@ -248,6 +278,11 @@ blinkit_clone/
 |       |-- components/
 |       |-- context/
 |       `-- pages/
+|-- delivery-panel/
+|   |-- Dockerfile
+|   |-- index.html
+|   |-- nginx.conf
+|   `-- src/
 |-- deploy/
 |   `-- render.yaml
 |-- compose.yaml

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.auth import require_delivery_partner
 from app.database import get_db
 from app.models import Order, OrderStatus, PaymentStatus, User, UserRole
-from app.schemas import DeliveryOrderOut, DeliveryOrderStatusUpdate
+from app.schemas import DeliveryOrderOut, DeliveryOrderStatusUpdate, DeliverySummaryOut
 from app.tracking import assigned_partner_email, tracking_detail
 
 router = APIRouter(prefix="/delivery", tags=["delivery"])
@@ -91,21 +91,67 @@ def get_accessible_order(order_id: int, current_user: User, db: Session) -> Orde
     return order
 
 
-@router.get("/orders", response_model=list[DeliveryOrderOut])
-def list_delivery_orders(
-    current_user: User = Depends(require_delivery_partner),
-    db: Session = Depends(get_db),
-) -> list[dict]:
+def list_accessible_delivery_orders(current_user: User, db: Session) -> list[Order]:
     orders = db.scalars(
         select(Order)
         .options(*order_options())
         .where(Order.status.in_(VISIBLE_STATUSES))
         .order_by(Order.created_at.desc(), Order.id.desc())
     ).all()
+    return [order for order in orders if can_access_order(order, current_user)]
+
+
+def serialize_delivery_summary(orders: list[Order]) -> dict:
+    return {
+        "active_orders": sum(
+            1 for order in orders if order.status != OrderStatus.DELIVERED
+        ),
+        "packing_orders": sum(
+            1
+            for order in orders
+            if order.status in {OrderStatus.CONFIRMED, OrderStatus.PACKING}
+        ),
+        "out_for_delivery_orders": sum(
+            1 for order in orders if order.status == OrderStatus.OUT_FOR_DELIVERY
+        ),
+        "delivered_orders": sum(
+            1 for order in orders if order.status == OrderStatus.DELIVERED
+        ),
+        "cod_collection_due": paise_to_rupees(
+            sum(
+                order.total_paise
+                for order in orders
+                if order.payment_method == "cash_on_delivery"
+                and order.payment_status == PaymentStatus.PENDING
+                and order.status != OrderStatus.DELIVERED
+            )
+        ),
+        "delivered_value": paise_to_rupees(
+            sum(
+                order.total_paise
+                for order in orders
+                if order.status == OrderStatus.DELIVERED
+            )
+        ),
+    }
+
+
+@router.get("/summary", response_model=DeliverySummaryOut)
+def read_delivery_summary(
+    current_user: User = Depends(require_delivery_partner),
+    db: Session = Depends(get_db),
+) -> dict:
+    return serialize_delivery_summary(list_accessible_delivery_orders(current_user, db))
+
+
+@router.get("/orders", response_model=list[DeliveryOrderOut])
+def list_delivery_orders(
+    current_user: User = Depends(require_delivery_partner),
+    db: Session = Depends(get_db),
+) -> list[dict]:
     return [
         serialize_delivery_order(order)
-        for order in orders
-        if can_access_order(order, current_user)
+        for order in list_accessible_delivery_orders(current_user, db)
     ]
 
 

@@ -255,6 +255,15 @@ class DeliveryOrderStatusUpdate(BaseModel):
     status: Literal["out_for_delivery", "delivered"]
 
 
+class DeliverySummaryOut(BaseModel):
+    active_orders: int = Field(ge=0)
+    packing_orders: int = Field(ge=0)
+    out_for_delivery_orders: int = Field(ge=0)
+    delivered_orders: int = Field(ge=0)
+    cod_collection_due: float = Field(ge=0)
+    delivered_value: float = Field(ge=0)
+
+
 class RazorpayOrderCreate(BaseModel):
     amount: float = Field(gt=0, le=500_000)
     currency: str = Field(default="INR", min_length=3, max_length=3, pattern="^[A-Z]{3}$")

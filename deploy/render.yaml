@@ -27,3 +27,13 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://campuskart-api.onrender.com
+      - key: VITE_DELIVERY_PANEL_URL
+        value: https://campuskart-delivery.onrender.com
+
+  - type: web
+    name: campuskart-delivery
+    env: docker
+    dockerfilePath: ./delivery-panel/Dockerfile
+    envVars:
+      - key: VITE_API_URL
+        value: https://campuskart-api.onrender.com

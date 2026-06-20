@@ -78,6 +78,7 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
     headers = delivery_headers_for_order(client, order)
 
     listed = client.get("/delivery/orders", headers=headers)
+    summary_before = client.get("/delivery/summary", headers=headers)
     out_for_delivery = client.patch(
         f"/delivery/orders/{order.id}/status",
         json={"status": "out_for_delivery"},
@@ -88,15 +89,22 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
         json={"status": "delivered"},
         headers=headers,
     )
+    summary_after = client.get("/delivery/summary", headers=headers)
     db_session.refresh(order)
 
     assert listed.status_code == 200
     assert any(item["id"] == order.id for item in listed.json())
+    assert summary_before.status_code == 200
+    assert summary_before.json()["active_orders"] == 1
+    assert summary_before.json()["cod_collection_due"] == listed.json()[0]["total"]
     assert out_for_delivery.json()["status"] == "out_for_delivery"
     assert delivered.json()["status"] == "delivered"
     assert delivered.json()["payment_status"] == "paid"
     assert delivered.json()["customer_name"] == "Delivery Test Customer"
     assert delivered.json()["delivery_partner"]["phone"].startswith("+91")
+    assert summary_after.json()["active_orders"] == 0
+    assert summary_after.json()["delivered_orders"] == 1
+    assert summary_after.json()["cod_collection_due"] == 0
     assert order.payment_status == PaymentStatus.PAID
 
 
@@ -104,9 +112,11 @@ def test_delivery_routes_reject_customers(client) -> None:
     headers = customer_headers(client, email="not-delivery@example.com")
 
     response = client.get("/delivery/orders", headers=headers)
+    summary = client.get("/delivery/summary", headers=headers)
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Delivery partner access required"
+    assert summary.status_code == 403
 
 
 def test_delivery_partner_cannot_access_unassigned_order(
