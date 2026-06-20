@@ -1,0 +1,19 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campuskart
+      POSTGRES_USER: campuskart
+      POSTGRES_PASSWORD: campuskart
+    ports:
+      - "5432:5432"
+    volumes:
+      - campuskart_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campuskart -d campuskart"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  campuskart_postgres_data:

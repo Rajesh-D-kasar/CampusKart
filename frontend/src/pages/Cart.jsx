@@ -1,14 +1,35 @@
 import { Link } from "react-router-dom";
 import CartItem from "../components/CartItem";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
+function Price({ value }) {
+  return (
+    <>
+      {"\u20B9"}
+      {value}
+    </>
+  );
+}
+
 function Cart() {
-  const { items, total, updateQuantity, removeItem, clearCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const {
+    items,
+    total,
+    deliveryFee,
+    grandTotal,
+    loading,
+    error,
+    updateQuantity,
+    removeItem,
+    clearCart,
+  } = useCart();
 
   if (items.length === 0) {
     return (
       <section className="container page-section empty-state">
-        <span aria-hidden="true">🛒</span>
+        <span aria-hidden="true">{"\u{1F6D2}"}</span>
         <h1>Your cart is empty</h1>
         <p>Add a few campus essentials and they will appear here.</p>
         <Link className="button" to="/products">
@@ -17,8 +38,6 @@ function Cart() {
       </section>
     );
   }
-
-  const deliveryFee = total >= 199 ? 0 : 20;
 
   return (
     <section className="container page-section">
@@ -31,6 +50,9 @@ function Cart() {
           Clear cart
         </button>
       </div>
+
+      {loading && <p className="status-card">Syncing cart...</p>}
+      {error && <p className="form-error">{error}</p>}
 
       <div className="cart-layout">
         <div className="cart-list">
@@ -47,19 +69,28 @@ function Cart() {
           <h2>Order summary</h2>
           <div>
             <span>Subtotal</span>
-            <strong>₹{total}</strong>
+            <strong>
+              <Price value={total} />
+            </strong>
           </div>
           <div>
             <span>Delivery</span>
-            <strong>{deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}</strong>
+            <strong>
+              {deliveryFee === 0 ? "Free" : <Price value={deliveryFee} />}
+            </strong>
           </div>
           <div className="summary-total">
             <span>Total</span>
-            <strong>₹{total + deliveryFee}</strong>
+            <strong>
+              <Price value={grandTotal} />
+            </strong>
           </div>
-          <button className="button checkout-button" disabled>
-            Checkout coming next
-          </button>
+          <Link
+            className="button checkout-button"
+            to={isAuthenticated ? "/checkout" : "/login"}
+          >
+            {isAuthenticated ? "Proceed to checkout" : "Login to checkout"}
+          </Link>
         </aside>
       </div>
     </section>

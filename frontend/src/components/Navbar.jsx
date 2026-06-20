@@ -1,8 +1,10 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 function Navbar() {
   const { itemCount } = useCart();
+  const { isAuthenticated, logout, user } = useAuth();
   const navClassName = ({ isActive }) => (isActive ? "active" : undefined);
 
   return (
@@ -19,9 +21,31 @@ function Navbar() {
           <NavLink className={navClassName} to="/products">
             Products
           </NavLink>
-          <NavLink className={navClassName} to="/login">
-            Login
-          </NavLink>
+          {isAuthenticated ? (
+            <>
+              <NavLink className={navClassName} to="/orders">
+                Orders
+              </NavLink>
+              {user.role === "admin" && (
+                <NavLink className={navClassName} to="/admin">
+                  Admin
+                </NavLink>
+              )}
+              <span className="nav-user">Hi, {user.full_name.split(" ")[0]}</span>
+              <button className="nav-button" onClick={logout}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink className={navClassName} to="/login">
+                Login
+              </NavLink>
+              <NavLink className={navClassName} to="/register">
+                Register
+              </NavLink>
+            </>
+          )}
           <NavLink
             className={({ isActive }) =>
               `cart-link${isActive ? " active" : ""}`

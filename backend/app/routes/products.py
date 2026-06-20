@@ -1,85 +1,91 @@
-from fastapi import APIRouter, HTTPException
+from typing import Literal
 
-from app.schemas import Product
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session, selectinload
+
+from app.database import get_db
+from app.models import Category, Inventory, Product
+from app.schemas import CategoryOut, ProductOut
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-PRODUCTS = [
-    Product(
-        id=1,
-        name="Maggi Noodles",
-        price=15,
-        category="Snacks",
-        unit="70 g pack",
-        icon="🍜",
-    ),
-    Product(
-        id=2,
-        name="Fresh Milk",
-        price=60,
-        category="Dairy",
-        unit="1 litre",
-        icon="🥛",
-    ),
-    Product(
-        id=3,
-        name="Whole Wheat Bread",
-        price=40,
-        category="Bakery",
-        unit="400 g loaf",
-        icon="🍞",
-    ),
-    Product(
-        id=4,
-        name="Bananas",
-        price=45,
-        category="Fruits",
-        unit="6 pieces",
-        icon="🍌",
-    ),
-    Product(
-        id=5,
-        name="Potato Chips",
-        price=20,
-        category="Snacks",
-        unit="52 g pack",
-        icon="🥔",
-    ),
-    Product(
-        id=6,
-        name="Orange Juice",
-        price=110,
-        category="Beverages",
-        unit="1 litre",
-        icon="🧃",
-    ),
-    Product(
-        id=7,
-        name="Eggs",
-        price=78,
-        category="Breakfast",
-        unit="6 pieces",
-        icon="🥚",
-    ),
-    Product(
-        id=8,
-        name="Dark Chocolate",
-        price=95,
-        category="Sweets",
-        unit="100 g bar",
-        icon="🍫",
-    ),
-]
+
+def product_query():
+    return select(Product).options(
+        selectinload(Product.category),
+        selectinload(Product.inventory_items).selectinload(Inventory.store),
+    )
 
 
-@router.get("", response_model=list[Product])
-def list_products() -> list[Product]:
-    return PRODUCTS
+@router.get("", response_model=list[ProductOut])
+def list_products(
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    category: str | None = Query(default=None, min_length=1, max_length=120),
+    sort: Literal["name", "price_low", "price_high", "discount"] = "name",
+    db: Session = Depends(get_db),
+) -> list[Product]:
+    statement = product_query().where(
+        Product.is_active.is_(True),
+        Product.category.has(Category.is_active.is_(True)),
+    )
+
+    if search:
+        pattern = f"%{search.strip()}%"
+        statement = statement.where(
+            or_(Product.name.ilike(pattern), Product.description.ilike(pattern))
+        )
+
+    if category:
+        statement = statement.where(Product.category.has(slug=category))
+
+    if sort == "price_low":
+        statement = statement.order_by(Product.price_paise, Product.name)
+    elif sort == "price_high":
+        statement = statement.order_by(Product.price_paise.desc(), Product.name)
+    elif sort == "discount":
+        discount_expression = (
+            (Product.mrp_paise - Product.price_paise) * 100.0 / Product.mrp_paise
+        )
+        statement = statement.order_by(
+            discount_expression.desc(),
+            Product.name,
+        )
+    else:
+        statement = statement.order_by(Product.name)
+
+    return list(db.scalars(statement).all())
 
 
-@router.get("/{product_id}", response_model=Product)
-def get_product(product_id: int) -> Product:
-    product = next((item for item in PRODUCTS if item.id == product_id), None)
-    if product is None:
+@router.get("/categories", response_model=list[CategoryOut])
+def list_categories(db: Session = Depends(get_db)) -> list[dict[str, int | str | None]]:
+    statement = (
+        select(Category, func.count(Product.id).label("product_count"))
+        .outerjoin(
+            Product,
+            and_(Product.category_id == Category.id, Product.is_active.is_(True)),
+        )
+        .where(Category.is_active.is_(True))
+        .group_by(Category.id)
+        .order_by(Category.display_order, Category.name)
+    )
+
+    return [
+        {
+            "id": category.id,
+            "name": category.name,
+            "slug": category.slug,
+            "image_url": category.image_url,
+            "display_order": category.display_order,
+            "product_count": product_count,
+        }
+        for category, product_count in db.execute(statement).all()
+    ]
+
+
+@router.get("/{product_id}", response_model=ProductOut)
+def get_product(product_id: int, db: Session = Depends(get_db)) -> Product:
+    product = db.scalar(product_query().where(Product.id == product_id))
+    if product is None or not product.is_active or not product.category.is_active:
         raise HTTPException(status_code=404, detail="Product not found")
     return product

@@ -5,4 +5,6 @@ venv/
 node_modules/
 dist/
 .pytest_cache/
+*.db
+.coverage
 .DS_Store

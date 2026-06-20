@@ -1,14 +1,16 @@
-
 function CartItem({ item, onQuantityChange, onRemove }) {
   return (
     <article className="cart-item">
       <div className="cart-item-icon" aria-hidden="true">
-        {item.icon}
+        {item.image_url ? <img src={item.image_url} alt="" /> : item.icon}
       </div>
       <div className="cart-item-details">
         <h3>{item.name}</h3>
         <p>{item.unit}</p>
-        <strong>₹{item.price}</strong>
+        <strong>
+          {"\u20B9"}
+          {item.price}
+        </strong>
       </div>
       <div className="quantity-control" aria-label={`Quantity for ${item.name}`}>
         <button
@@ -25,7 +27,10 @@ function CartItem({ item, onQuantityChange, onRemove }) {
           +
         </button>
       </div>
-      <strong className="line-total">₹{item.price * item.quantity}</strong>
+      <strong className="line-total">
+        {"\u20B9"}
+        {item.price * item.quantity}
+      </strong>
       <button className="remove-button" onClick={() => onRemove(item.id)}>
         Remove
       </button>
