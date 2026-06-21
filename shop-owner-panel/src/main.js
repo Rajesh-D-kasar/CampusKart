@@ -293,6 +293,28 @@ async function updateOrderItem(orderId, itemId, payload) {
   }
 }
 
+async function refundRazorpayOrder(orderId) {
+  const reason = window.prompt("Refund reason likho:", "Customer requested refund");
+  if (reason === null) return;
+  state.saving = `refund-${orderId}`;
+  renderOrders();
+  try {
+    await apiFetch("/payments/razorpay/refunds", {
+      method: "POST",
+      body: JSON.stringify({
+        order_id: orderId,
+        reason: reason.trim() || "Admin refund",
+      }),
+    });
+    await loadDashboard();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderOrders();
+  }
+}
+
 async function createSupportTicket() {
   const ticket = await apiFetch("/support/tickets", {
     method: "POST",
@@ -517,6 +539,8 @@ function renderOrderCard(order) {
   );
   const canMarkReady =
     ["confirmed", "packing"].includes(order.status) && !order.store_ready;
+  const canRefund =
+    order.payment_method === "razorpay" && order.payment_status === "paid";
   return `
     <article class="order-card">
       <div class="order-main">
@@ -650,6 +674,20 @@ function renderOrderCard(order) {
             `
           )
           .join("")}
+        ${
+          canRefund
+            ? `
+              <button
+                class="ghost-button danger-button"
+                data-refund-order="${order.id}"
+                ${state.saving === `refund-${order.id}` ? "disabled" : ""}
+                type="button"
+              >
+                ${state.saving === `refund-${order.id}` ? "Refunding..." : "Refund Razorpay"}
+              </button>
+            `
+            : ""
+        }
       </div>
     </article>
   `;
@@ -916,6 +954,12 @@ el.ordersList.addEventListener("click", async (event) => {
       packed_quantity: 0,
       substitution_note: note.trim(),
     });
+    return;
+  }
+
+  const refundButton = event.target.closest("[data-refund-order]");
+  if (refundButton) {
+    await refundRazorpayOrder(Number(refundButton.dataset.refundOrder));
     return;
   }
 

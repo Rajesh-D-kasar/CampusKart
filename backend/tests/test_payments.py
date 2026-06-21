@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.config import Settings, get_settings
 from app.main import app
 from app.models import PaymentTransaction, Product
+from app.seed import ADMIN_USER
 
 
 def configured_settings(secret: str = "test_secret", webhook_secret: str = "webhook_secret"):
@@ -30,6 +31,12 @@ def auth_headers(client, email: str = "payments@example.com") -> dict[str, str]:
         "phone": "7555555555",
     }
     response = client.post("/auth/register", json=payload)
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def login_headers(client, email: str, password: str) -> dict[str, str]:
+    response = client.post("/auth/login", json={"email": email, "password": password})
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
@@ -182,4 +189,84 @@ def test_razorpay_order_and_webhook_record_payment_history(client, db_session) -
     assert {transaction.event_type for transaction in transactions} == {
         "order_paid",
         "payment.captured",
+    }
+
+
+def test_admin_can_execute_razorpay_refund(client, db_session, monkeypatch) -> None:
+    secret = "razorpay-secret"
+    app.dependency_overrides[get_settings] = lambda: configured_settings(secret)
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return json.dumps(
+                {
+                    "id": "rfnd_test_789",
+                    "payment_id": "pay_refund_456",
+                    "amount": 12500,
+                    "currency": "INR",
+                    "status": "processed",
+                }
+            ).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        assert timeout == 10
+        assert request.full_url.endswith("/v1/payments/pay_refund_456/refund")
+        return FakeResponse()
+
+    monkeypatch.setattr("app.routes.payments.urlopen", fake_urlopen)
+
+    try:
+        headers = auth_headers(client, email="razorpay-refund@example.com")
+        product = db_session.scalar(select(Product).order_by(Product.id))
+        assert product is not None
+        address = client.post("/addresses", json=address_payload(), headers=headers)
+        client.post(
+            "/cart/items",
+            json={"product_id": product.id, "quantity": 1},
+            headers=headers,
+        )
+        razorpay_order_id = "order_refund_123"
+        razorpay_payment_id = "pay_refund_456"
+        checkout_signature = hmac.new(
+            secret.encode("utf-8"),
+            f"{razorpay_order_id}|{razorpay_payment_id}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        order = client.post(
+            "/orders",
+            json={
+                "address_id": address.json()["id"],
+                "payment_method": "razorpay",
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": razorpay_payment_id,
+                "razorpay_signature": checkout_signature,
+            },
+            headers=headers,
+        )
+        admin = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+        refund = client.post(
+            "/payments/razorpay/refunds",
+            json={"order_id": order.json()["id"], "amount": 125, "reason": "Test refund"},
+            headers=admin,
+        )
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+    transactions = db_session.scalars(
+        select(PaymentTransaction).where(
+            PaymentTransaction.order_id == order.json()["id"]
+        )
+    ).all()
+    assert refund.status_code == 200
+    assert refund.json()["refund_id"] == "rfnd_test_789"
+    assert refund.json()["payment_status"] == "refunded"
+    assert {transaction.event_type for transaction in transactions} == {
+        "order_paid",
+        "refund_requested",
     }

@@ -381,6 +381,24 @@ class RazorpayVerifyOut(BaseModel):
     verified: bool
 
 
+class RazorpayRefundCreate(BaseModel):
+    order_id: int
+    amount: float | None = Field(default=None, gt=0, le=500_000)
+    speed: Literal["normal", "optimum"] = "normal"
+    reason: str | None = Field(default=None, max_length=300)
+
+
+class RazorpayRefundOut(BaseModel):
+    provider: str = "razorpay"
+    order_id: int
+    payment_id: str
+    refund_id: str
+    amount: float = Field(ge=0)
+    currency: str
+    status: str
+    payment_status: str
+
+
 class RazorpayWebhookOut(BaseModel):
     provider: str = "razorpay"
     received: bool

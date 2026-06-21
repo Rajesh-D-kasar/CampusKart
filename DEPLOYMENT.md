@@ -67,6 +67,7 @@ VITE_SHOP_OWNER_PANEL_URL=https://your-shop-panel.vercel.app
 - Verify customer OTP email delivery in SMTP mode.
 - Test one cash-on-delivery order end to end.
 - Test one Razorpay test-mode payment end to end.
+- Test one Razorpay test-mode refund from the shop owner panel.
 - Configure the Razorpay webhook URL:
   `https://your-api.onrender.com/payments/razorpay/webhook`.
 - Enable Razorpay `payment.captured`, `payment.failed`, and refund events.
