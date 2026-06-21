@@ -19,7 +19,7 @@ from app.models import (
     Store,
     User,
 )
-from app.order_handoff import customer_dropoff_otp, handoff_state
+from app.order_handoff import customer_dropoff_otp, handoff_state, lifecycle_events
 from app.promotions import PromotionError, apply_coupon
 from app.routes.cart import (
     DELIVERY_FEE_PAISE,
@@ -86,6 +86,7 @@ def serialize_order(order: Order, db: Session, settings: Settings) -> dict:
             **tracking_detail(order),
             "customer_delivery_otp": customer_dropoff_otp(order, db, settings),
             **handoff_state(order, db),
+            "lifecycle_events": lifecycle_events(order, db),
             "items": [
                 {
                     "id": item.id,

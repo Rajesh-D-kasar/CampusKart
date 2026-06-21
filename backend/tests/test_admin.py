@@ -266,12 +266,22 @@ def test_support_ticket_flow_for_customer_and_admin(client) -> None:
         json={"status": "resolved", "priority": "high", "resolution": "Customer contacted."},
         headers=admin,
     )
+    reply = client.post(
+        f"/support/tickets/{created.json()['id']}/messages",
+        json={"message": "Support team has replied from admin desk."},
+        headers=admin,
+    )
 
     assert created.status_code == 201
     assert created.json()["status"] == "open"
+    assert created.json()["messages"][0]["message"] == (
+        "Customer did not receive the delivery OTP clearly."
+    )
     assert mine.status_code == 200
     assert mine.json()[0]["subject"] == "Delivery OTP issue"
     assert all_tickets.status_code == 200
     assert any(ticket["id"] == created.json()["id"] for ticket in all_tickets.json())
     assert updated.json()["status"] == "resolved"
     assert updated.json()["priority"] == "high"
+    assert reply.status_code == 200
+    assert reply.json()["messages"][-1]["message"] == "Support team has replied from admin desk."

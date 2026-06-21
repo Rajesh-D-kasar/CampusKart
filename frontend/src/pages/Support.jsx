@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { createSupportTicket, getSupportTickets } from "../api/supportApi";
+import {
+  addSupportMessage,
+  createSupportTicket,
+  getSupportTickets,
+} from "../api/supportApi";
 import { useAuth } from "../context/AuthContext";
 
 function formatStatus(value) {
@@ -15,6 +19,7 @@ function Support() {
   const [loading, setLoading] = useState(isAuthenticated);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [replyText, setReplyText] = useState({});
   const [form, setForm] = useState({
     category: "order",
     subject: orderId ? `Help with order #${orderId}` : "",
@@ -71,6 +76,23 @@ function Support() {
     } catch (supportError) {
       setError(
         supportError.response?.data?.detail || "Could not create support ticket."
+      );
+    }
+  };
+
+  const handleReply = async (ticketId) => {
+    const message = String(replyText[ticketId] || "").trim();
+    if (message.length < 2) return;
+    setError("");
+    try {
+      const ticket = await addSupportMessage(ticketId, { message });
+      setTickets((currentTickets) =>
+        currentTickets.map((item) => (item.id === ticketId ? ticket : item))
+      );
+      setReplyText((current) => ({ ...current, [ticketId]: "" }));
+    } catch (supportError) {
+      setError(
+        supportError.response?.data?.detail || "Could not send reply."
       );
     }
   };
@@ -151,6 +173,40 @@ function Support() {
                   <strong>{ticket.subject}</strong>
                   <p>{ticket.message}</p>
                   {ticket.resolution && <small>{ticket.resolution}</small>}
+                  {ticket.messages?.length > 0 && (
+                    <div className="ticket-thread">
+                      {ticket.messages.map((message) => (
+                        <div className="ticket-message" key={message.id}>
+                          <strong>
+                            {message.author_name} -{" "}
+                            {formatStatus(message.author_role)}
+                          </strong>
+                          <p>{message.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!["resolved", "closed"].includes(ticket.status) && (
+                    <div className="ticket-reply">
+                      <input
+                        value={replyText[ticket.id] || ""}
+                        onChange={(event) =>
+                          setReplyText((current) => ({
+                            ...current,
+                            [ticket.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Reply to support..."
+                      />
+                      <button
+                        className="button button-small"
+                        type="button"
+                        onClick={() => handleReply(ticket.id)}
+                      >
+                        Reply
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <span className={`status-chip status-${ticket.status}`}>
                   {formatStatus(ticket.status)}

@@ -224,6 +224,17 @@ async function createSupportTicket() {
   renderSupportTickets();
 }
 
+async function replySupportTicket(ticketId, message) {
+  const ticket = await apiFetch(`/support/tickets/${ticketId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+  state.supportTickets = state.supportTickets.map((item) =>
+    item.id === ticketId ? ticket : item
+  );
+  renderSupportTickets();
+}
+
 async function updateOrderStatus(orderId, status, otp) {
   const order = state.orders.find((item) => item.id === orderId);
   const cleanOtp = String(otp || "").trim();
@@ -370,8 +381,31 @@ function renderSupportTickets() {
             <span>#${ticket.id} - ${escapeHtml(ticket.category)}</span>
             <strong>${escapeHtml(ticket.subject)}</strong>
             <p>${escapeHtml(ticket.message)}</p>
+            ${
+              ticket.messages?.length
+                ? `<div class="ticket-thread">
+                    ${ticket.messages
+                      .map(
+                        (message) => `
+                          <div>
+                            <strong>${escapeHtml(message.author_name)} - ${escapeHtml(formatStatus(message.author_role))}</strong>
+                            <p>${escapeHtml(message.message)}</p>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>`
+                : ""
+            }
           </div>
-          <span class="status-pill status-${escapeHtml(ticket.status)}">${escapeHtml(formatStatus(ticket.status))}</span>
+          <div class="ticket-actions">
+            <span class="status-pill status-${escapeHtml(ticket.status)}">${escapeHtml(formatStatus(ticket.status))}</span>
+            ${
+              !["resolved", "closed"].includes(ticket.status)
+                ? `<button class="ghost-button" data-ticket-reply="${ticket.id}" type="button">Reply</button>`
+                : ""
+            }
+          </div>
         </article>
       `
     )
@@ -556,6 +590,18 @@ elements.supportForm.addEventListener("submit", async (event) => {
   setError(elements.panelError, "");
   try {
     await createSupportTicket();
+  } catch (error) {
+    setError(elements.panelError, error.message);
+  }
+});
+
+elements.supportList.addEventListener("click", async (event) => {
+  const replyButton = event.target.closest("[data-ticket-reply]");
+  if (!replyButton) return;
+  const message = window.prompt("Support reply likho:");
+  if (!message?.trim()) return;
+  try {
+    await replySupportTicket(Number(replyButton.dataset.ticketReply), message.trim());
   } catch (error) {
     setError(elements.panelError, error.message);
   }

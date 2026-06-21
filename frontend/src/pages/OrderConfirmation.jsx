@@ -82,6 +82,7 @@ function OrderConfirmation() {
 
   const address = order.delivery_address_snapshot;
   const trackingSteps = order.tracking_steps || [];
+  const lifecycleEvents = order.lifecycle_events || [];
   const partner = order.delivery_partner;
 
   return (
@@ -234,6 +235,21 @@ function OrderConfirmation() {
 
       <section className="checkout-card tracking-card">
         <h2>Order tracking</h2>
+        {lifecycleEvents.length > 0 && (
+          <div className="lifecycle-grid">
+            {lifecycleEvents.map((event) => (
+              <article
+                className={event.completed ? "is-complete" : ""}
+                key={event.key}
+              >
+                <span>{event.completed ? "\u2713" : ""}</span>
+                <strong>{event.label}</strong>
+                <p>{event.description}</p>
+                <small>{formatDateTime(event.timestamp)}</small>
+              </article>
+            ))}
+          </div>
+        )}
         <div className="tracking-timeline">
           {trackingSteps.map((step, index) => (
             <div

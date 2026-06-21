@@ -1146,6 +1146,37 @@ button.category-card {
   line-height: 1.5;
 }
 
+.ticket-thread {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ticket-message {
+  padding: 10px;
+  border-radius: 12px;
+  background: #f4faf0;
+}
+
+.ticket-message strong {
+  color: #243724;
+  font-size: 0.86rem;
+}
+
+.ticket-reply {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ticket-reply input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dbe3d7;
+  border-radius: 999px;
+}
+
 .status-chip {
   min-width: max-content;
   padding: 8px 11px;
@@ -1517,6 +1548,48 @@ button.category-card {
 
 .tracking-card {
   margin-top: 24px;
+}
+
+.lifecycle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lifecycle-grid article {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #edf1e9;
+  border-radius: 16px;
+  background: #fbfdf9;
+}
+
+.lifecycle-grid article > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: white;
+  background: #c8d6c2;
+  font-weight: 900;
+}
+
+.lifecycle-grid article.is-complete > span {
+  background: #1f8f3a;
+}
+
+.lifecycle-grid strong,
+.lifecycle-grid p,
+.lifecycle-grid small {
+  margin: 0;
+}
+
+.lifecycle-grid p,
+.lifecycle-grid small {
+  color: #657066;
+  line-height: 1.45;
 }
 
 .tracking-timeline {
@@ -2065,6 +2138,10 @@ button.category-card {
   }
 
   .tracking-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .lifecycle-grid {
     grid-template-columns: 1fr;
   }
 

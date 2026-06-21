@@ -15,6 +15,7 @@ const state = {
   deliveryPartners: [],
   supportTickets: [],
   inventory: [],
+  products: [],
   categories: [],
   orderTab: "open",
   orderQuery: "",
@@ -44,6 +45,7 @@ const el = {
   lowStockList: document.querySelector("#low-stock-list"),
   inventorySearch: document.querySelector("#inventory-search"),
   inventoryList: document.querySelector("#inventory-list"),
+  productManageList: document.querySelector("#product-manage-list"),
   productForm: document.querySelector("#product-form"),
   productCategory: document.querySelector("#product-category"),
   productName: document.querySelector("#product-name"),
@@ -172,7 +174,15 @@ async function loadDashboard() {
   setError(el.panelError, "");
 
   try {
-    const [summary, orders, deliveryPartners, supportTickets, inventory, categories] =
+    const [
+      summary,
+      orders,
+      deliveryPartners,
+      supportTickets,
+      inventory,
+      categories,
+      products,
+    ] =
       await Promise.all([
       apiFetch("/admin/summary"),
       apiFetch("/admin/orders"),
@@ -180,6 +190,7 @@ async function loadDashboard() {
       apiFetch("/admin/support/tickets"),
       apiFetch("/admin/inventory"),
       apiFetch("/admin/categories"),
+      apiFetch("/admin/products"),
     ]);
     state.summary = summary;
     state.orders = orders;
@@ -187,6 +198,7 @@ async function loadDashboard() {
     state.supportTickets = supportTickets;
     state.inventory = inventory;
     state.categories = categories;
+    state.products = products;
     renderDashboard();
   } catch (error) {
     setError(el.panelError, error.message);
@@ -285,6 +297,17 @@ async function updateSupportTicket(ticketId, status) {
   renderSupportTickets();
 }
 
+async function replySupportTicket(ticketId, message) {
+  const ticket = await apiFetch(`/support/tickets/${ticketId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+  state.supportTickets = state.supportTickets.map((item) =>
+    item.id === ticketId ? ticket : item
+  );
+  renderSupportTickets();
+}
+
 async function updateStock(productId, stockQuantity, reorderLevel, isActive = true) {
   state.saving = `stock-${productId}`;
   renderInventory();
@@ -306,6 +329,35 @@ async function updateStock(productId, stockQuantity, reorderLevel, isActive = tr
   } finally {
     state.saving = "";
     renderInventory();
+  }
+}
+
+async function updateProduct(productId) {
+  const priceInput = document.querySelector(`[data-product-price="${productId}"]`);
+  const mrpInput = document.querySelector(`[data-product-mrp="${productId}"]`);
+  const imageInput = document.querySelector(`[data-product-image="${productId}"]`);
+  const activeInput = document.querySelector(`[data-product-active="${productId}"]`);
+  state.saving = `product-${productId}`;
+  renderProducts();
+  try {
+    const updated = await apiFetch(`/admin/products/${productId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        price: Number(priceInput.value),
+        mrp: Number(mrpInput.value),
+        image_url: imageInput.value.trim(),
+        is_active: Boolean(activeInput.checked),
+      }),
+    });
+    state.products = state.products.map((item) =>
+      item.id === productId ? updated : item
+    );
+    await loadDashboard();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderProducts();
   }
 }
 
@@ -586,9 +638,26 @@ function renderSupportTickets() {
             <strong>${escapeHtml(ticket.subject)}</strong>
             <p>${escapeHtml(ticket.message)}</p>
             ${ticket.order_number ? `<small>Order: ${escapeHtml(ticket.order_number)}</small>` : ""}
+            ${
+              ticket.messages?.length
+                ? `<div class="ticket-thread">
+                    ${ticket.messages
+                      .map(
+                        (message) => `
+                          <div>
+                            <strong>${escapeHtml(message.author_name)} - ${escapeHtml(formatStatus(message.author_role))}</strong>
+                            <p>${escapeHtml(message.message)}</p>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>`
+                : ""
+            }
           </div>
           <div class="ticket-actions">
             <span class="status-pill status-${escapeHtml(ticket.status)}">${escapeHtml(formatStatus(ticket.status))}</span>
+            <button class="ghost-button small-button" data-ticket-reply="${ticket.id}" type="button">Reply</button>
             ${
               ticket.status !== "resolved"
                 ? `<button class="ghost-button small-button" data-ticket-status="resolved" data-ticket-id="${ticket.id}" type="button">Resolve</button>`
@@ -689,6 +758,47 @@ function renderCategories() {
     .join("");
 }
 
+function renderProducts() {
+  if (state.products.length === 0) {
+    el.productManageList.innerHTML = `<div class="empty-card"><h3>No products found</h3></div>`;
+    return;
+  }
+  el.productManageList.innerHTML = state.products
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(
+      (product) => `
+        <article class="product-manage-row">
+          <div class="item-name">
+            <span>${escapeHtml(product.category)}</span>
+            <strong>${escapeHtml(product.name)}</strong>
+            <small>${escapeHtml(product.unit)}</small>
+          </div>
+          <label>
+            Price
+            <input data-product-price="${product.id}" type="number" min="0" step="1" value="${product.price}" />
+          </label>
+          <label>
+            MRP
+            <input data-product-mrp="${product.id}" type="number" min="0" step="1" value="${product.mrp}" />
+          </label>
+          <label class="image-field">
+            Image URL
+            <input data-product-image="${product.id}" value="${escapeHtml(product.image_url || "")}" placeholder="https://..." />
+          </label>
+          <label class="active-toggle">
+            <input data-product-active="${product.id}" type="checkbox" ${product.is_active ? "checked" : ""} />
+            Active
+          </label>
+          <button class="primary-button small-button" data-save-product="${product.id}" ${state.saving === `product-${product.id}` ? "disabled" : ""} type="button">
+            ${state.saving === `product-${product.id}` ? "Saving..." : "Save"}
+          </button>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderDashboard() {
   renderShell();
   renderStats();
@@ -697,6 +807,7 @@ function renderDashboard() {
   renderSupportTickets();
   renderLowStock();
   renderInventory();
+  renderProducts();
   renderCategories();
 }
 
@@ -760,6 +871,18 @@ el.supportForm.addEventListener("submit", async (event) => {
 });
 
 el.supportList.addEventListener("click", async (event) => {
+  const replyButton = event.target.closest("[data-ticket-reply]");
+  if (replyButton) {
+    const message = window.prompt("Support reply likho:");
+    if (!message?.trim()) return;
+    try {
+      await replySupportTicket(Number(replyButton.dataset.ticketReply), message.trim());
+    } catch (error) {
+      setError(el.panelError, error.message);
+    }
+    return;
+  }
+
   const button = event.target.closest("[data-ticket-id]");
   if (!button) return;
   try {
@@ -786,6 +909,12 @@ el.inventoryList.addEventListener("click", async (event) => {
   const stockInput = document.querySelector(`[data-stock-input="${productId}"]`);
   const reorderInput = document.querySelector(`[data-reorder-input="${productId}"]`);
   await updateStock(productId, Number(stockInput.value), Number(reorderInput.value));
+});
+
+el.productManageList.addEventListener("click", async (event) => {
+  const saveButton = event.target.closest("[data-save-product]");
+  if (!saveButton) return;
+  await updateProduct(Number(saveButton.dataset.saveProduct));
 });
 
 el.productForm.addEventListener("submit", async (event) => {

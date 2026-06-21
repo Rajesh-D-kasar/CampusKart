@@ -244,6 +244,14 @@ class OrderTrackingStepOut(BaseModel):
     timestamp: datetime | None = None
 
 
+class OrderLifecycleEventOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    completed: bool
+    timestamp: datetime | None = None
+
+
 class OrderSummaryOut(BaseModel):
     id: int
     order_number: str
@@ -276,6 +284,7 @@ class OrderOut(OrderSummaryOut):
     dropoff_verified_at: datetime | None = None
     delivery_progress_percent: int = Field(ge=0, le=100)
     tracking_steps: list[OrderTrackingStepOut]
+    lifecycle_events: list[OrderLifecycleEventOut]
     updated_at: datetime
 
 
@@ -349,6 +358,7 @@ class AdminOrderOut(OrderSummaryOut):
     dropoff_verified: bool = False
     pickup_verified_at: datetime | None = None
     dropoff_verified_at: datetime | None = None
+    lifecycle_events: list[OrderLifecycleEventOut] = Field(default_factory=list)
 
 
 class AdminOrderStatusUpdate(BaseModel):
@@ -487,6 +497,19 @@ class SupportTicketUpdate(BaseModel):
     resolution: str | None = Field(default=None, max_length=1500)
 
 
+class SupportTicketMessageCreate(BaseModel):
+    message: str = Field(min_length=2, max_length=1500)
+
+
+class SupportTicketMessageOut(BaseModel):
+    id: int
+    author_name: str
+    author_role: str
+    message: str
+    is_internal: bool
+    created_at: datetime
+
+
 class SupportTicketOut(BaseModel):
     id: int
     audience: str
@@ -501,5 +524,6 @@ class SupportTicketOut(BaseModel):
     requester_name: str
     requester_email: EmailStr
     requester_role: str
+    messages: list[SupportTicketMessageOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

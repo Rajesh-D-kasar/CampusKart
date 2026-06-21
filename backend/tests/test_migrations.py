@@ -28,4 +28,5 @@ def test_initial_migration_creates_commerce_tables(tmp_path) -> None:
         "auth_otp_codes",
         "order_handoff_verifications",
         "support_tickets",
+        "support_ticket_messages",
     }.issubset(table_names)

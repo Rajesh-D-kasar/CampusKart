@@ -103,6 +103,67 @@ def customer_dropoff_otp(order: Order, db: Session, settings: Settings) -> str |
     return handoff_code(order, DROPOFF_PURPOSE, settings)
 
 
+def lifecycle_events(order: Order, db: Session) -> list[dict]:
+    state = handoff_state(order, db)
+    status_value = enum_value(order.status)
+    confirmed_like = status_value in {
+        OrderStatus.CONFIRMED.value,
+        OrderStatus.PACKING.value,
+        OrderStatus.OUT_FOR_DELIVERY.value,
+        OrderStatus.DELIVERED.value,
+    }
+    packing_like = status_value in {
+        OrderStatus.PACKING.value,
+        OrderStatus.OUT_FOR_DELIVERY.value,
+        OrderStatus.DELIVERED.value,
+    }
+
+    return [
+        {
+            "key": "placed",
+            "label": "Order placed",
+            "description": "Customer order store ko mil gaya.",
+            "completed": True,
+            "timestamp": order.created_at,
+        },
+        {
+            "key": "confirmed",
+            "label": "Store confirmed",
+            "description": "Dukaan ne order accept kar liya.",
+            "completed": confirmed_like,
+            "timestamp": order.updated_at if confirmed_like else None,
+        },
+        {
+            "key": "packing",
+            "label": "Packing",
+            "description": "Items pick aur pack ho rahe hain.",
+            "completed": packing_like,
+            "timestamp": order.updated_at if packing_like else None,
+        },
+        {
+            "key": "ready_for_pickup",
+            "label": "Ready for pickup",
+            "description": "Packed bag delivery boy ke handoff ke liye ready hai.",
+            "completed": state["store_ready"],
+            "timestamp": state["store_ready_at"],
+        },
+        {
+            "key": "picked_up",
+            "label": "Picked up",
+            "description": "Delivery boy ne shop OTP se bag pickup verify kiya.",
+            "completed": state["pickup_verified"],
+            "timestamp": state["pickup_verified_at"],
+        },
+        {
+            "key": "delivered",
+            "label": "Delivered",
+            "description": "Customer OTP se final delivery verify hui.",
+            "completed": state["dropoff_verified"],
+            "timestamp": state["dropoff_verified_at"],
+        },
+    ]
+
+
 def verify_handoff_otp(
     order: Order,
     db: Session,

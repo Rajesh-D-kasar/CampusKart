@@ -194,6 +194,7 @@ button:disabled {
 .support-form select,
 .support-form textarea,
 .partner-select select,
+.product-manage-row input,
 .catalog-grid input,
 .inventory-row input {
   width: 100%;
@@ -215,6 +216,7 @@ button:disabled {
 .support-form textarea:focus,
 .partner-select select:focus,
 .catalog-grid input:focus,
+.product-manage-row input:focus,
 .inventory-row input:focus {
   border-color: #1f8f3a;
   box-shadow: 0 0 0 4px rgb(31 143 58 / 12%);
@@ -224,6 +226,44 @@ button:disabled {
   min-height: 96px;
   padding-top: 12px;
   resize: vertical;
+}
+
+.products-panel {
+  gap: 16px;
+}
+
+.product-manage-list {
+  display: grid;
+  gap: 12px;
+}
+
+.product-manage-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 100px 100px minmax(220px, 1fr) 90px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #eee8d9;
+  border-radius: 18px;
+  background: #fffdf8;
+}
+
+.product-manage-row label {
+  display: grid;
+  gap: 6px;
+  color: #4f4b3f;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.product-manage-row .active-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.product-manage-row .active-toggle input {
+  width: auto;
+  min-height: auto;
 }
 
 .primary-button,
@@ -601,6 +641,18 @@ button:disabled {
   gap: 8px;
 }
 
+.ticket-thread {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ticket-thread div {
+  padding: 9px;
+  border-radius: 12px;
+  background: #fff8e8;
+}
+
 .item-name {
   display: grid;
   gap: 5px;
@@ -718,6 +770,7 @@ button:disabled {
 
   .stats-grid,
   .inventory-row,
+  .product-manage-row,
   .support-form,
   .form-grid {
     grid-template-columns: 1fr;

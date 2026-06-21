@@ -38,7 +38,12 @@ from app.schemas import (
     AdminProductUpdate,
     AdminSummaryOut,
 )
-from app.order_handoff import handoff_state, mark_store_ready, shop_pickup_otp
+from app.order_handoff import (
+    handoff_state,
+    lifecycle_events,
+    mark_store_ready,
+    shop_pickup_otp,
+)
 from app.tracking import tracking_summary
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -165,6 +170,7 @@ def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict
         "items": serialize_order_items(order),
         "pickup_otp": shop_pickup_otp(order, db, settings),
         **handoff_state(order, db),
+        "lifecycle_events": lifecycle_events(order, db),
     }
 
 

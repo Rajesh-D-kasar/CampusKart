@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createAddress, getAddresses } from "../api/addressApi";
 import { getOffers, previewCoupon } from "../api/offerApi";
 import { placeOrder } from "../api/orderApi";
+import { createRazorpayOrder, verifyRazorpayPayment } from "../api/paymentApi";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
@@ -34,6 +35,11 @@ const paymentMethods = [
     title: "Mock card",
     description: "Use the test flow to simulate card success or failure.",
   },
+  {
+    id: "razorpay",
+    title: "Razorpay checkout",
+    description: "Use real Razorpay checkout when backend keys are configured.",
+  },
 ];
 
 function Price({ value }) {
@@ -43,6 +49,17 @@ function Price({ value }) {
       {value}
     </>
   );
+}
+
+function loadRazorpayScript() {
+  if (window.Razorpay) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Could not load Razorpay checkout."));
+    document.body.appendChild(script);
+  });
 }
 
 function Checkout() {
@@ -164,11 +181,57 @@ function Checkout() {
         throw new Error("Please select or add an address.");
       }
 
+      if (paymentMethod === "razorpay") {
+        await loadRazorpayScript();
+        const checkoutTotal = appliedCoupon?.total ?? grandTotal;
+        const razorpayOrder = await createRazorpayOrder({
+          amount: checkoutTotal,
+          currency: "INR",
+          receipt: `CK-${Date.now()}`,
+          notes: {
+            address_id: String(addressId),
+            promo_code: appliedCoupon?.code || "",
+          },
+        });
+
+        const paymentResult = await new Promise((resolve, reject) => {
+          const checkout = new window.Razorpay({
+            key: razorpayOrder.key_id,
+            amount: Math.round(razorpayOrder.amount * 100),
+            currency: razorpayOrder.currency,
+            name: "CampusKart",
+            description: "Grocery order payment",
+            order_id: razorpayOrder.order_id,
+            handler: resolve,
+            modal: {
+              ondismiss: () => reject(new Error("Payment was cancelled.")),
+            },
+            prefill: {
+              contact: addresses.find((item) => String(item.id) === String(addressId))
+                ?.phone,
+            },
+            theme: { color: "#1f8f3a" },
+          });
+          checkout.open();
+        });
+
+        const verification = await verifyRazorpayPayment({
+          razorpay_order_id: paymentResult.razorpay_order_id,
+          razorpay_payment_id: paymentResult.razorpay_payment_id,
+          razorpay_signature: paymentResult.razorpay_signature,
+        });
+        if (!verification.verified) {
+          throw new Error("Payment verification failed. Please contact support.");
+        }
+      }
+
       const order = await placeOrder({
         address_id: Number(addressId),
-        payment_method: paymentMethod,
+        payment_method: paymentMethod === "razorpay" ? "upi" : paymentMethod,
         mock_payment_result:
-          paymentMethod !== "cash_on_delivery" && simulatePaymentFailure
+          paymentMethod !== "cash_on_delivery" &&
+          paymentMethod !== "razorpay" &&
+          simulatePaymentFailure
             ? "failed"
             : "success",
         promo_code: appliedCoupon?.code || null,
@@ -390,7 +453,7 @@ function Checkout() {
               </label>
             ))}
           </div>
-          {paymentMethod !== "cash_on_delivery" && (
+          {paymentMethod !== "cash_on_delivery" && paymentMethod !== "razorpay" && (
             <label className="payment-failure-toggle">
               <input
                 checked={simulatePaymentFailure}
@@ -403,8 +466,8 @@ function Checkout() {
             </label>
           )}
           <p className="payment-note">
-            Online payments are mock-only for this project. No real money is
-            charged.
+            Razorpay uses real checkout only when backend keys are configured.
+            Mock UPI/card stay available for local testing.
           </p>
           {coupons.length > 0 && (
             <section className="coupon-box">
@@ -495,6 +558,8 @@ function Checkout() {
               ? "Processing..."
               : paymentMethod === "cash_on_delivery"
                 ? "Place order"
+                : paymentMethod === "razorpay"
+                  ? "Pay with Razorpay"
                 : "Pay and place order"}
           </button>
         </aside>

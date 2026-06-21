@@ -659,6 +659,24 @@ a {
   background: #fbfdf9;
 }
 
+.ticket-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.ticket-thread {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ticket-thread div {
+  padding: 9px;
+  border-radius: 12px;
+  background: #f4fff0;
+}
+
 .support-ticket strong,
 .support-ticket p {
   display: block;

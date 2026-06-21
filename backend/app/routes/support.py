@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.auth import get_current_user, require_admin
 from app.database import get_db
-from app.models import Order, SupportTicket, User, UserRole
-from app.schemas import SupportTicketCreate, SupportTicketOut, SupportTicketUpdate
+from app.models import Order, SupportTicket, SupportTicketMessage, User, UserRole
+from app.schemas import (
+    SupportTicketCreate,
+    SupportTicketMessageCreate,
+    SupportTicketOut,
+    SupportTicketUpdate,
+)
 
 router = APIRouter(tags=["support"])
 
@@ -23,7 +28,22 @@ def enum_value(value) -> str:
 
 
 def ticket_options():
-    return selectinload(SupportTicket.requester), selectinload(SupportTicket.order)
+    return (
+        selectinload(SupportTicket.requester),
+        selectinload(SupportTicket.order),
+        selectinload(SupportTicket.messages).selectinload(SupportTicketMessage.author),
+    )
+
+
+def serialize_message(message: SupportTicketMessage) -> dict:
+    return {
+        "id": message.id,
+        "author_name": message.author.full_name,
+        "author_role": enum_value(message.author.role),
+        "message": message.message,
+        "is_internal": message.is_internal,
+        "created_at": message.created_at,
+    }
 
 
 def serialize_ticket(ticket: SupportTicket) -> dict:
@@ -41,6 +61,7 @@ def serialize_ticket(ticket: SupportTicket) -> dict:
         "requester_name": ticket.requester.full_name,
         "requester_email": ticket.requester.email,
         "requester_role": enum_value(ticket.requester.role),
+        "messages": [serialize_message(message) for message in ticket.messages],
         "created_at": ticket.created_at,
         "updated_at": ticket.updated_at,
     }
@@ -92,6 +113,14 @@ def create_support_ticket(
         message=payload.message.strip(),
     )
     db.add(ticket)
+    db.flush()
+    db.add(
+        SupportTicketMessage(
+            ticket_id=ticket.id,
+            author_id=current_user.id,
+            message=payload.message.strip(),
+        )
+    )
     db.commit()
     saved_ticket = db.scalar(
         select(SupportTicket).options(*ticket_options()).where(SupportTicket.id == ticket.id)
@@ -112,6 +141,50 @@ def list_my_support_tickets(
         .order_by(SupportTicket.created_at.desc(), SupportTicket.id.desc())
     ).all()
     return [serialize_ticket(ticket) for ticket in tickets]
+
+
+def get_ticket_for_user(ticket_id: int, user: User, db: Session) -> SupportTicket:
+    ticket = db.scalar(
+        select(SupportTicket)
+        .options(*ticket_options())
+        .where(SupportTicket.id == ticket_id)
+    )
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    if user.role != UserRole.ADMIN and ticket.requester_id != user.id:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    return ticket
+
+
+@router.post(
+    "/support/tickets/{ticket_id}/messages",
+    response_model=SupportTicketOut,
+)
+def add_support_message(
+    ticket_id: int,
+    payload: SupportTicketMessageCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    ticket = get_ticket_for_user(ticket_id, current_user, db)
+    if ticket.status in {"resolved", "closed"} and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Resolved tickets cannot receive customer replies",
+        )
+
+    ticket.status = "in_progress" if current_user.role == UserRole.ADMIN else "open"
+    db.add(
+        SupportTicketMessage(
+            ticket_id=ticket.id,
+            author_id=current_user.id,
+            message=payload.message.strip(),
+        )
+    )
+    db.commit()
+    db.expire_all()
+    saved_ticket = get_ticket_for_user(ticket_id, current_user, db)
+    return serialize_ticket(saved_ticket)
 
 
 @router.get("/admin/support/tickets", response_model=list[SupportTicketOut])

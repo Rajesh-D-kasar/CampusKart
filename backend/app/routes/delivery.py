@@ -10,6 +10,7 @@ from app.order_handoff import (
     DROPOFF_PURPOSE,
     PICKUP_PURPOSE,
     handoff_state,
+    lifecycle_events,
     verify_handoff_otp,
 )
 from app.schemas import DeliveryOrderOut, DeliveryOrderStatusUpdate, DeliverySummaryOut
@@ -75,6 +76,7 @@ def serialize_delivery_order(order: Order, db: Session) -> dict:
         "delivery_instruction": order.delivery_instruction,
         "customer_delivery_otp": None,
         **handoff_state(order, db),
+        "lifecycle_events": lifecycle_events(order, db),
         "items": [
             {
                 "id": item.id,

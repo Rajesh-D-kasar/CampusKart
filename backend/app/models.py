@@ -460,3 +460,30 @@ class SupportTicket(TimestampMixin, Base):
 
     requester: Mapped["User"] = relationship(foreign_keys=[requester_id])
     order: Mapped[Optional["Order"]] = relationship(foreign_keys=[order_id])
+    messages: Mapped[list["SupportTicketMessage"]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="SupportTicketMessage.id",
+    )
+
+
+class SupportTicketMessage(TimestampMixin, Base):
+    __tablename__ = "support_ticket_messages"
+    __table_args__ = (
+        Index("ix_support_ticket_messages_ticket_created", "ticket_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    author_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    message: Mapped[str] = mapped_column(Text)
+    is_internal: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+
+    ticket: Mapped["SupportTicket"] = relationship(back_populates="messages")
+    author: Mapped["User"] = relationship(foreign_keys=[author_id])
