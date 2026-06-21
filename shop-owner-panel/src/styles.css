@@ -1,4 +1,11 @@
 :root {
+  --brand: #1f8f3a;
+  --brand-dark: #176f31;
+  --ink: #142315;
+  --muted: #706851;
+  --line: #eee5d3;
+  --surface: rgb(255 255 255 / 92%);
+  --shadow: 0 18px 50px rgb(75 64 28 / 9%);
   color: #142315;
   background: #f5f2e9;
   font-family:
@@ -18,8 +25,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top right, rgb(255 190 92 / 25%), transparent 28rem),
-    linear-gradient(135deg, #fffaf0 0%, #f4f8ee 45%, #fff9ee 100%);
+    radial-gradient(circle at top right, rgb(255 190 92 / 18%), transparent 28rem),
+    radial-gradient(circle at bottom left, rgb(31 143 58 / 9%), transparent 28rem),
+    linear-gradient(135deg, #fffdf6 0%, #f6faef 45%, #fffaf0 100%);
 }
 
 button,
@@ -35,6 +43,11 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(31 143 58 / 28%);
+  outline-offset: 3px;
 }
 
 .eyebrow,
@@ -74,8 +87,8 @@ button:disabled {
 .stat-card {
   border: 1px solid rgb(70 56 25 / 10%);
   border-radius: 26px;
-  background: rgb(255 255 255 / 88%);
-  box-shadow: 0 22px 70px rgb(75 64 28 / 10%);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
 }
 
@@ -208,12 +221,27 @@ button:disabled {
   border: 0;
   border-radius: 999px;
   font-weight: 900;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .primary-button {
   color: white;
-  background: #1f8f3a;
+  background: var(--brand);
   box-shadow: 0 14px 30px rgb(31 143 58 / 22%);
+}
+
+.primary-button:hover,
+.ghost-button:hover,
+.tabs button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:hover {
+  background: var(--brand-dark);
 }
 
 .ghost-button {
@@ -299,9 +327,10 @@ button:disabled {
 }
 
 .tabs button.active {
-  border-color: #1f8f3a;
+  border-color: var(--brand);
   color: white;
-  background: #1f8f3a;
+  background: var(--brand);
+  box-shadow: 0 12px 28px rgb(31 143 58 / 16%);
 }
 
 .orders-list,
@@ -317,14 +346,16 @@ button:disabled {
 .quiet-card,
 .empty-card {
   border: 1px solid #eee8d9;
-  border-radius: 18px;
-  background: #fffdf8;
+  border-radius: 20px;
+  background: rgb(255 253 248 / 92%);
 }
 
 .order-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 14px;
+  padding: 18px;
+  border-left: 5px solid #ffb84d;
+  box-shadow: 0 16px 42px rgb(75 64 28 / 7%);
 }
 
 .order-card small,
@@ -343,10 +374,19 @@ button:disabled {
 .customer-card {
   display: grid;
   gap: 10px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #eee8d9;
   border-radius: 18px;
-  background: #fffaf0;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 82%), rgb(255 250 240 / 82%));
+}
+
+.handoff-card {
+  border-color: rgb(255 184 77 / 32%);
+}
+
+.customer-card {
+  background: rgb(255 255 255 / 78%);
 }
 
 .pack-card strong,
@@ -387,10 +427,13 @@ button:disabled {
 .otp-box {
   display: grid;
   gap: 4px;
-  padding: 13px;
+  padding: 14px;
   border-radius: 16px;
   color: #16220f;
-  background: #fff0bf;
+  background:
+    radial-gradient(circle at top right, rgb(255 255 255 / 40%), transparent 42%),
+    #fff0bf;
+  box-shadow: inset 0 0 0 1px rgb(124 93 16 / 8%);
 }
 
 .otp-box span {
@@ -473,7 +516,8 @@ button:disabled {
   grid-template-columns: minmax(220px, 1fr) 100px 120px 120px auto;
   align-items: center;
   gap: 14px;
-  padding: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 28px rgb(75 64 28 / 5%);
 }
 
 .item-name {

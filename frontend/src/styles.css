@@ -1,11 +1,19 @@
 :root {
+  --brand: #1f8f3a;
+  --brand-dark: #176f31;
+  --ink: #172018;
+  --muted: #5f6b61;
+  --line: #e2e8de;
+  --surface: rgb(255 255 255 / 92%);
+  --soft-shadow: 0 18px 50px rgb(38 65 35 / 8%);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  color: #172018;
+  color: var(--ink);
   background: #f8faf6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -16,6 +24,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background:
+    radial-gradient(circle at 5% 0%, rgb(191 239 97 / 18%), transparent 26rem),
+    radial-gradient(circle at 95% 8%, rgb(255 219 76 / 18%), transparent 28rem),
+    linear-gradient(180deg, #fbfdf8 0%, #f6faf3 42%, #fffdf8 100%);
 }
 
 button,
@@ -27,6 +39,11 @@ textarea {
 
 a {
   color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(31 143 58 / 28%);
+  outline-offset: 3px;
 }
 
 .app-shell {
@@ -48,9 +65,10 @@ main {
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid #e5eadf;
-  background: rgb(255 255 255 / 94%);
-  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgb(226 232 222 / 80%);
+  background: rgb(255 255 255 / 78%);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 34px rgb(33 64 34 / 6%);
 }
 
 .navbar {
@@ -62,6 +80,9 @@ main {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 1.35rem;
   font-weight: 900;
   text-decoration: none;
@@ -70,30 +91,44 @@ main {
 
 .brand span,
 .nav-links a.active {
-  color: #1f8f3a;
+  color: var(--brand);
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 8px;
 }
 
 .nav-links a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
   color: #4f5d50;
   font-size: 0.95rem;
   font-weight: 700;
   text-decoration: none;
 }
 
+.nav-links a:hover,
+.nav-links a.active {
+  background: #f0faeb;
+}
+
 .nav-user {
+  padding: 0 6px;
   color: #172018;
   font-size: 0.9rem;
   font-weight: 800;
 }
 
 .nav-button {
+  min-height: 38px;
+  padding: 0 12px;
   border: 0;
+  border-radius: 999px;
   color: #4f5d50;
   background: transparent;
   font-weight: 800;
@@ -108,6 +143,14 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  color: white !important;
+  background: var(--brand);
+}
+
+.cart-link:hover,
+.cart-link.active {
+  color: white !important;
+  background: var(--brand-dark) !important;
 }
 
 .cart-count {
@@ -117,25 +160,53 @@ main {
   place-items: center;
   border-radius: 999px;
   color: white;
-  background: #1f8f3a;
+  background: rgb(255 255 255 / 22%);
   font-size: 0.75rem;
 }
 
 .hero {
+  position: relative;
+  overflow: hidden;
   padding: 92px 0;
   background:
-    radial-gradient(circle at 85% 15%, rgb(255 219 76 / 55%), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgb(255 219 76 / 52%), transparent 18rem),
+    radial-gradient(circle at 72% 84%, rgb(31 143 58 / 12%), transparent 24rem),
     linear-gradient(135deg, #efffe9 0%, #f8faf6 65%);
+  border-bottom: 1px solid rgb(226 232 222 / 78%);
+}
+
+.hero::after {
+  content: "Fresh picks ready in minutes";
+  width: min(260px, 34vw);
+  min-height: 150px;
+  position: absolute;
+  right: max(24px, calc((100vw - 1120px) / 2));
+  bottom: 44px;
+  display: grid;
+  align-content: end;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 32px;
+  color: #15351b;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 82%), rgb(255 255 255 / 50%)),
+    radial-gradient(circle at top right, rgb(255 184 77 / 42%), transparent 5rem);
+  box-shadow: 0 28px 70px rgb(43 82 33 / 15%);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  backdrop-filter: blur(16px);
 }
 
 .hero-content {
+  position: relative;
+  z-index: 1;
   max-width: 800px;
 }
 
 .eyebrow {
   display: inline-block;
   margin-bottom: 12px;
-  color: #1f8f3a;
+  color: var(--brand);
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -176,16 +247,23 @@ main {
   justify-content: center;
   padding: 0 22px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 999px;
   color: white;
-  background: #1f8f3a;
+  background: var(--brand);
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
+  box-shadow: 0 14px 30px rgb(31 143 58 / 18%);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 
 .button:hover {
-  background: #187531;
+  transform: translateY(-1px);
+  background: var(--brand-dark);
+  box-shadow: 0 18px 36px rgb(31 143 58 / 22%);
 }
 
 .button:disabled {
@@ -194,9 +272,11 @@ main {
 }
 
 .button-secondary {
-  color: #172018;
-  background: white;
-  box-shadow: inset 0 0 0 1px #dce4d8;
+  color: var(--ink);
+  background: rgb(255 255 255 / 88%);
+  box-shadow:
+    inset 0 0 0 1px #dce4d8,
+    0 12px 30px rgb(38 65 35 / 7%);
 }
 
 .button-secondary:hover {
@@ -231,7 +311,7 @@ main {
   gap: 18px;
   padding: 28px;
   border-radius: 24px;
-  box-shadow: 0 18px 48px rgb(38 65 35 / 10%);
+  box-shadow: var(--soft-shadow);
 }
 
 .promo-green {
@@ -266,9 +346,32 @@ main {
 .order-card,
 .auth-card {
   border: 1px solid #e2e8de;
-  border-radius: 18px;
-  background: white;
-  box-shadow: 0 12px 38px rgb(38 65 35 / 6%);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.feature-grid article,
+.category-card,
+.coupon-card,
+.product-card,
+.cart-item,
+.order-card {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.feature-grid article:hover,
+.category-card:hover,
+.coupon-card:hover,
+.product-card:hover,
+.cart-item:hover,
+.order-card:hover {
+  transform: translateY(-2px);
+  border-color: #c9dfc2;
+  box-shadow: 0 22px 56px rgb(38 65 35 / 10%);
 }
 
 .feature-grid article {
@@ -422,7 +525,7 @@ main {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px;
+  padding: 18px;
   color: inherit;
   text-align: left;
   text-decoration: none;
@@ -436,7 +539,8 @@ button.category-card {
 .category-card:hover,
 .category-card.is-active {
   border-color: #9bd48d;
-  background: #f2ffed;
+  background:
+    linear-gradient(135deg, rgb(242 255 237 / 92%), rgb(255 255 255 / 86%));
 }
 
 .category-card.is-active {
@@ -450,13 +554,15 @@ button.category-card {
 }
 
 .category-card-icon {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   display: grid;
-  flex: 0 0 52px;
+  flex: 0 0 56px;
   place-items: center;
-  border-radius: 16px;
-  background: #edf7e9;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgb(255 219 76 / 22%), transparent 52%),
+    #edf7e9;
   font-size: 1.7rem;
 }
 
@@ -579,7 +685,10 @@ button.category-card {
 
 .product-card {
   position: relative;
-  padding: 20px;
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr auto;
+  min-height: 100%;
+  padding: 18px;
 }
 
 .discount-badge {
@@ -591,6 +700,7 @@ button.category-card {
   border-radius: 999px;
   color: #17612d;
   background: #dff7d2;
+  box-shadow: 0 8px 20px rgb(31 143 58 / 12%);
   font-size: 0.74rem;
   font-weight: 900;
 }
@@ -600,8 +710,11 @@ button.category-card {
   display: grid;
   place-items: center;
   margin-bottom: 18px;
-  border-radius: 14px;
-  background: #f4f8f0;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgb(255 219 76 / 18%), transparent 45%),
+    linear-gradient(180deg, #f8fbf5, #eef7e9);
   font-size: 4.4rem;
 }
 
@@ -621,6 +734,8 @@ button.category-card {
 
 .product-card h3 {
   margin: 7px 0 3px;
+  min-height: 2.55em;
+  line-height: 1.25;
 }
 
 .product-unit {
@@ -644,7 +759,10 @@ button.category-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid #edf1e9;
 }
 
 .price-stack {
@@ -1774,6 +1892,14 @@ button.category-card {
     flex-direction: column;
   }
 
+  .hero::after {
+    width: auto;
+    min-height: auto;
+    position: static;
+    margin: 20px auto 0;
+    padding: 16px 18px;
+  }
+
   .cart-layout {
     grid-template-columns: 1fr;
   }
@@ -1798,8 +1924,15 @@ button.category-card {
 
   .nav-links {
     width: 100%;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .nav-links a,
+  .nav-button {
+    min-height: 36px;
+    padding-inline: 10px;
   }
 
   .hero {
