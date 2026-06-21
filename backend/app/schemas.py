@@ -207,10 +207,19 @@ class AddressOut(AddressBase):
 
 class OrderCreate(BaseModel):
     address_id: int
-    payment_method: Literal["cash_on_delivery", "upi", "card"] = "cash_on_delivery"
+    payment_method: Literal["cash_on_delivery", "upi", "card", "razorpay"] = (
+        "cash_on_delivery"
+    )
     mock_payment_result: Literal["success", "failed"] = "success"
     promo_code: str | None = Field(default=None, max_length=30)
     delivery_instruction: str | None = Field(default=None, max_length=300)
+    razorpay_order_id: str | None = Field(default=None, max_length=100)
+    razorpay_payment_id: str | None = Field(default=None, max_length=100)
+    razorpay_signature: str | None = Field(default=None, max_length=200)
+
+
+class OrderCancelRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=300)
 
 
 class OrderItemOut(BaseModel):
@@ -221,12 +230,33 @@ class OrderItemOut(BaseModel):
     unit_price: float = Field(ge=0)
     quantity: int = Field(ge=1)
     line_total: float = Field(ge=0)
+    packed_quantity: int = Field(ge=0)
+    fulfillment_status: str
+    substitution_note: str | None = None
 
 
 class DeliveryPartnerOut(BaseModel):
     name: str
     phone: str
     vehicle_number: str
+
+
+class DeliveryLocationOut(BaseModel):
+    id: int
+    latitude: float
+    longitude: float
+    accuracy_meters: float | None = None
+    battery_percent: int | None = Field(default=None, ge=0, le=100)
+    source: str
+    created_at: datetime
+
+
+class DeliveryLocationUpdate(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    accuracy_meters: float | None = Field(default=None, ge=0, le=10000)
+    battery_percent: int | None = Field(default=None, ge=0, le=100)
+    source: str = Field(default="browser", min_length=2, max_length=40)
 
 
 class AdminDeliveryPartnerOut(DeliveryPartnerOut):
@@ -266,6 +296,7 @@ class OrderSummaryOut(BaseModel):
     eta_minutes: int | None = Field(default=None, ge=0)
     estimated_delivery_at: datetime | None = None
     delivery_partner: DeliveryPartnerOut | None = None
+    delivery_location: DeliveryLocationOut | None = None
     tracking_message: str
     created_at: datetime
 
@@ -309,6 +340,21 @@ class DeliverySummaryOut(BaseModel):
     delivered_value: float = Field(ge=0)
 
 
+class PaymentTransactionOut(BaseModel):
+    id: int
+    order_id: int | None
+    provider: str
+    provider_order_id: str | None
+    provider_payment_id: str | None
+    provider_refund_id: str | None
+    event_type: str
+    status: str
+    amount: float = Field(ge=0)
+    currency: str
+    verified: bool
+    created_at: datetime
+
+
 class RazorpayOrderCreate(BaseModel):
     amount: float = Field(gt=0, le=500_000)
     currency: str = Field(default="INR", min_length=3, max_length=3, pattern="^[A-Z]{3}$")
@@ -335,12 +381,53 @@ class RazorpayVerifyOut(BaseModel):
     verified: bool
 
 
+class RazorpayWebhookOut(BaseModel):
+    provider: str = "razorpay"
+    received: bool
+    verified: bool
+    event_type: str
+    payment_status: str | None = None
+
+
+class OrderInvoiceOut(BaseModel):
+    invoice_number: str
+    order_id: int
+    order_number: str
+    status: str
+    payment_status: str
+    payment_method: str
+    customer_name: str
+    customer_email: EmailStr
+    delivery_address_snapshot: dict[str, str | None]
+    items: list[OrderItemOut]
+    subtotal: float = Field(ge=0)
+    delivery_fee: float = Field(ge=0)
+    discount: float = Field(ge=0)
+    total: float = Field(ge=0)
+    created_at: datetime
+
+
 class AdminSummaryOut(BaseModel):
     total_orders: int = Field(ge=0)
     open_orders: int = Field(ge=0)
     active_products: int = Field(ge=0)
     low_stock_items: int = Field(ge=0)
     total_revenue: float = Field(ge=0)
+
+
+class AdminTopProductOut(BaseModel):
+    product_name: str
+    quantity: int = Field(ge=0)
+    revenue: float = Field(ge=0)
+
+
+class AdminAnalyticsOut(BaseModel):
+    gross_revenue: float = Field(ge=0)
+    paid_revenue: float = Field(ge=0)
+    average_order_value: float = Field(ge=0)
+    orders_by_status: dict[str, int]
+    payment_mix: dict[str, int]
+    top_products: list[AdminTopProductOut]
 
 
 class AdminOrderOut(OrderSummaryOut):
@@ -370,6 +457,12 @@ class AdminOrderStatusUpdate(BaseModel):
         "delivered",
         "cancelled",
     ]
+
+
+class AdminOrderItemFulfillmentUpdate(BaseModel):
+    packed_quantity: int | None = Field(default=None, ge=0)
+    fulfillment_status: Literal["pending", "packed", "substituted", "unavailable"] | None = None
+    substitution_note: str | None = Field(default=None, max_length=255)
 
 
 class AdminOrderAssignmentUpdate(BaseModel):
@@ -527,3 +620,15 @@ class SupportTicketOut(BaseModel):
     messages: list[SupportTicketMessageOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+
+
+class NotificationOut(BaseModel):
+    id: int
+    order_id: int | None
+    channel: str
+    event_type: str
+    title: str
+    message: str
+    is_read: bool
+    metadata_json: dict | None = None
+    created_at: datetime

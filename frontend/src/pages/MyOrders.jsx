@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getNotifications, markNotificationRead } from "../api/notificationApi";
 import { getOrders } from "../api/orderApi";
 import { useAuth } from "../context/AuthContext";
 
@@ -19,6 +20,7 @@ function formatStatus(status) {
 function formatPaymentMethod(method) {
   if (method === "upi") return "Mock UPI";
   if (method === "card") return "Mock card";
+  if (method === "razorpay") return "Razorpay";
   return "Cash on delivery";
 }
 
@@ -39,6 +41,7 @@ function formatEta(order) {
 function MyOrders() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,7 +52,12 @@ function MyOrders() {
       setLoading(true);
       setError("");
       try {
-        setOrders(await getOrders());
+        const [orderList, notificationList] = await Promise.all([
+          getOrders(),
+          getNotifications(),
+        ]);
+        setOrders(orderList);
+        setNotifications(notificationList);
       } catch (orderError) {
         setError(orderError.response?.data?.detail || "Could not load orders.");
       } finally {
@@ -59,6 +67,17 @@ function MyOrders() {
 
     loadOrders();
   }, [isAuthenticated]);
+
+  const handleReadNotification = async (notificationId) => {
+    try {
+      const notification = await markNotificationRead(notificationId);
+      setNotifications((current) =>
+        current.map((item) => (item.id === notificationId ? notification : item))
+      );
+    } catch {
+      // Notification read state is non-critical; refresh will retry later.
+    }
+  };
 
   if (authLoading) {
     return (
@@ -96,6 +115,31 @@ function MyOrders() {
 
       {loading && <p className="status-card">Loading orders...</p>}
       {error && <p className="form-error">{error}</p>}
+
+      {notifications.length > 0 && (
+        <section className="notification-strip">
+          {notifications.slice(0, 3).map((notification) => (
+            <article
+              className={notification.is_read ? "is-read" : ""}
+              key={notification.id}
+            >
+              <div>
+                <strong>{notification.title}</strong>
+                <p>{notification.message}</p>
+              </div>
+              {!notification.is_read && (
+                <button
+                  className="button button-small"
+                  type="button"
+                  onClick={() => handleReadNotification(notification.id)}
+                >
+                  Mark read
+                </button>
+              )}
+            </article>
+          ))}
+        </section>
+      )}
 
       {!loading && !error && orders.length === 0 && (
         <div className="empty-state orders-empty-state">

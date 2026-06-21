@@ -10,6 +10,7 @@ from app.routes.admin import router as admin_router
 from app.routes.addresses import router as addresses_router
 from app.routes.cart import router as cart_router
 from app.routes.delivery import router as delivery_router
+from app.routes.notifications import router as notifications_router
 from app.routes.offers import router as offers_router
 from app.routes.orders import router as orders_router
 from app.routes.payments import router as payments_router
@@ -47,7 +48,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault(
         "Permissions-Policy",
-        "camera=(), microphone=(), geolocation=()",
+        "camera=(), microphone=(), geolocation=(self)",
     )
     return response
 
@@ -62,6 +63,7 @@ app.include_router(orders_router)
 app.include_router(payments_router)
 app.include_router(admin_router)
 app.include_router(support_router)
+app.include_router(notifications_router)
 
 
 @app.get("/")

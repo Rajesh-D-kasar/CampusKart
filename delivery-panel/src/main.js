@@ -274,6 +274,42 @@ async function updateOrderStatus(orderId, status, otp) {
   }
 }
 
+function currentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Browser geolocation available nahi hai."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 15000,
+    });
+  });
+}
+
+async function shareOrderLocation(orderId) {
+  setError(elements.panelError, "");
+  try {
+    const position = await currentPosition();
+    const location = await apiFetch(`/delivery/orders/${orderId}/location`, {
+      method: "POST",
+      body: JSON.stringify({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy_meters: position.coords.accuracy,
+        source: "browser",
+      }),
+    });
+    state.orders = state.orders.map((order) =>
+      order.id === orderId ? { ...order, delivery_location: location } : order
+    );
+    renderOrders();
+  } catch (error) {
+    setError(elements.panelError, error.message || "Location share nahi ho payi.");
+  }
+}
+
 function renderShell() {
   const isLoggedIn = Boolean(state.token && state.user);
   elements.loginView.hidden = isLoggedIn;
@@ -477,7 +513,23 @@ function renderOrderCard(order) {
         <button class="ghost-button" data-copy-order="${escapeHtml(order.order_number)}" type="button">
           Copy order
         </button>
+        ${
+          ["out_for_delivery", "delivered"].includes(order.status)
+            ? `<button class="ghost-button" data-share-location="${order.id}" type="button">
+                Share live location
+              </button>`
+            : ""
+        }
       </div>
+      ${
+        order.delivery_location
+          ? `<div class="location-card">
+              <span>Last location shared</span>
+              <strong>${formatDateTime(order.delivery_location.created_at)}</strong>
+              <a href="https://www.google.com/maps/search/?api=1&query=${order.delivery_location.latitude},${order.delivery_location.longitude}" target="_blank" rel="noreferrer">Open map</a>
+            </div>`
+          : ""
+      }
 
       <details class="items-card" open>
         <summary>Item checklist</summary>
@@ -627,6 +679,11 @@ elements.ordersGrid.addEventListener("click", async (event) => {
     setTimeout(() => {
       copyButton.textContent = "Copy order";
     }, 900);
+  }
+
+  const locationButton = event.target.closest("[data-share-location]");
+  if (locationButton) {
+    await shareOrderLocation(Number(locationButton.dataset.shareLocation));
   }
 });
 

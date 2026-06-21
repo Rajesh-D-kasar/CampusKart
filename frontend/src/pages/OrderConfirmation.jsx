@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { getOrder } from "../api/orderApi";
+import { cancelOrder, getOrder, getOrderInvoice } from "../api/orderApi";
 
 function Price({ value }) {
   return (
@@ -18,6 +18,7 @@ function formatStatus(status) {
 function formatPaymentMethod(method) {
   if (method === "upi") return "Mock UPI";
   if (method === "card") return "Mock card";
+  if (method === "razorpay") return "Razorpay";
   return "Cash on delivery";
 }
 
@@ -42,6 +43,8 @@ function OrderConfirmation() {
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!location.state?.order);
   const [error, setError] = useState("");
+  const [invoice, setInvoice] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     if (order) return;
@@ -84,6 +87,31 @@ function OrderConfirmation() {
   const trackingSteps = order.tracking_steps || [];
   const lifecycleEvents = order.lifecycle_events || [];
   const partner = order.delivery_partner;
+  const canCancel = ["placed", "confirmed", "packing"].includes(order.status);
+
+  const handleCancel = async () => {
+    const reason = window.prompt("Cancel reason likho:", "Ordered by mistake");
+    if (reason === null) return;
+    setActionError("");
+    try {
+      setOrder(await cancelOrder(order.id, reason.trim()));
+    } catch (cancelError) {
+      setActionError(
+        cancelError.response?.data?.detail || "Could not cancel order."
+      );
+    }
+  };
+
+  const handleInvoice = async () => {
+    setActionError("");
+    try {
+      setInvoice(await getOrderInvoice(order.id));
+    } catch (invoiceError) {
+      setActionError(
+        invoiceError.response?.data?.detail || "Could not load invoice."
+      );
+    }
+  };
 
   return (
     <section className="container page-section">
@@ -133,6 +161,19 @@ function OrderConfirmation() {
             <strong>{formatStatus(order.status)}</strong>
             <small>{formatDateTime(order.updated_at)}</small>
           </article>
+          {order.delivery_location && (
+            <article>
+              <span>Last rider location</span>
+              <strong>{formatDateTime(order.delivery_location.created_at)}</strong>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${order.delivery_location.latitude},${order.delivery_location.longitude}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open map
+              </a>
+            </article>
+          )}
         </div>
       </section>
 
@@ -161,6 +202,12 @@ function OrderConfirmation() {
                   <small>
                     {item.unit} x {item.quantity}
                   </small>
+                  {item.fulfillment_status !== "pending" && (
+                    <small>
+                      {formatStatus(item.fulfillment_status)}
+                      {item.substitution_note ? ` - ${item.substitution_note}` : ""}
+                    </small>
+                  )}
                 </div>
                 <strong>
                   <Price value={item.line_total} />
@@ -230,8 +277,48 @@ function OrderConfirmation() {
           >
             Need help?
           </Link>
+          <button
+            className="button button-secondary checkout-button"
+            type="button"
+            onClick={handleInvoice}
+          >
+            View invoice
+          </button>
+          {canCancel && (
+            <button
+              className="button button-secondary checkout-button"
+              type="button"
+              onClick={handleCancel}
+            >
+              Cancel order
+            </button>
+          )}
+          {actionError && <p className="form-error">{actionError}</p>}
         </aside>
       </div>
+
+      {invoice && (
+        <section className="checkout-card invoice-card">
+          <h2>Invoice {invoice.invoice_number}</h2>
+          <p>
+            {invoice.customer_name} - {formatPaymentMethod(invoice.payment_method)}
+          </p>
+          <div className="invoice-grid">
+            <span>Subtotal</span>
+            <strong>
+              <Price value={invoice.subtotal} />
+            </strong>
+            <span>Delivery</span>
+            <strong>
+              <Price value={invoice.delivery_fee} />
+            </strong>
+            <span>Total</span>
+            <strong>
+              <Price value={invoice.total} />
+            </strong>
+          </div>
+        </section>
+      )}
 
       <section className="checkout-card tracking-card">
         <h2>Order tracking</h2>

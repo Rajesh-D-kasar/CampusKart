@@ -478,6 +478,31 @@ button:disabled {
   accent-color: #1f8f3a;
 }
 
+.pack-line {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #eee7d9;
+  border-radius: 16px;
+  background: #fffdf8;
+}
+
+.pack-line label {
+  border-top: 0;
+  padding: 0;
+}
+
+.pack-line small {
+  color: #686257;
+  font-weight: 800;
+}
+
+.pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .pack-list span,
 .customer-card p,
 .handoff-card small,

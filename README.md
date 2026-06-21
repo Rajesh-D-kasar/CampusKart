@@ -26,12 +26,13 @@ run locally, but structured like a real commerce system.
 - Guest cart in browser storage and authenticated cart sync after login
 - Address CRUD for checkout
 - Cash-on-delivery, mock UPI/card, and Razorpay checkout flows
-- Razorpay-ready payment order and signature verification endpoints
+- Razorpay payment order, checkout verification, webhook reconciliation, and payment history
 - Store-level inventory and stock reservation during checkout
-- My Orders page with ETA, delivery partner, and timeline tracking
+- My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
   inventory controls
-- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, doorstep handoff, and partner support
+- Admin analytics for revenue, average order value, payment mix, and top products
+- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, live location sharing, doorstep handoff, and partner support
 - Separate delivery partner website at `delivery-panel/`
 - Separate shop owner website at `shop-owner-panel/` with rider assignment,
   ready-for-pickup, product editing, and support desk controls
@@ -168,6 +169,7 @@ It includes:
 - shop pickup OTP is required before starting the route
 - shop owner must mark the order packed/ready before pickup OTP is shown
 - customer delivery OTP is required before marking the order delivered
+- live location sharing after pickup starts
 - delivery partner support form for route, COD, customer, and app issues
 
 For deployment, set `delivery-panel/.env` or hosting env var:
@@ -200,6 +202,7 @@ It includes:
 - seller support form plus support ticket desk
 - support reply thread for communicating with customers and riders
 - quick order status buttons
+- item-level packing, substitution, and unavailable-item marking
 - low-stock warning list
 - stock quantity and reorder alert updates
 - edit product price, MRP, image URL, and active status
@@ -223,11 +226,12 @@ VITE_API_URL=https://your-api-domain.example
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
-| Delivery | `GET /delivery/orders`, `PATCH /delivery/orders/{id}/status` |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
+| Delivery | `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
+| Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
-| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify` |
-| Admin | `GET /admin/summary`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/webhook` |
+| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 ## Development Accounts
 
@@ -267,6 +271,8 @@ checkout. The backend exposes Razorpay-ready endpoints:
   `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are configured.
 - `POST /payments/razorpay/verify` validates Razorpay payment signatures with
   HMAC SHA-256.
+- `POST /payments/razorpay/webhook` validates `X-Razorpay-Signature`, records
+  payment events, and updates matched order payment status.
 
 Copy `backend/.env.example` to `backend/.env` and fill the Razorpay variables
 before using real gateway calls. In the customer app, choose the Razorpay payment
@@ -339,7 +345,7 @@ npm run build
 Expected current result:
 
 ```text
-Backend tests: 47 passed
+Backend tests: 50 passed
 Frontend tests: 4 passed
 Frontend build: passed
 Delivery panel build: passed
@@ -389,9 +395,8 @@ blinkit_clone/
 
 ## Roadmap
 
-- Razorpay webhook reconciliation and payment status persistence
 - Dedicated product detail pages and recommendations
-- Live delivery partner location sharing
+- Razorpay refund API execution after refund initiation
 - CI workflow and production observability
 
 ## Notes

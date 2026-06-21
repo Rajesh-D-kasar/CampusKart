@@ -172,6 +172,7 @@ function Checkout() {
 
     try {
       let addressId = selectedAddressId;
+      let razorpayPayment = null;
       if (useNewAddress || addresses.length === 0) {
         const createdAddress = await createAddress(addressForm);
         addressId = String(createdAddress.id);
@@ -194,7 +195,7 @@ function Checkout() {
           },
         });
 
-        const paymentResult = await new Promise((resolve, reject) => {
+        razorpayPayment = await new Promise((resolve, reject) => {
           const checkout = new window.Razorpay({
             key: razorpayOrder.key_id,
             amount: Math.round(razorpayOrder.amount * 100),
@@ -216,9 +217,9 @@ function Checkout() {
         });
 
         const verification = await verifyRazorpayPayment({
-          razorpay_order_id: paymentResult.razorpay_order_id,
-          razorpay_payment_id: paymentResult.razorpay_payment_id,
-          razorpay_signature: paymentResult.razorpay_signature,
+          razorpay_order_id: razorpayPayment.razorpay_order_id,
+          razorpay_payment_id: razorpayPayment.razorpay_payment_id,
+          razorpay_signature: razorpayPayment.razorpay_signature,
         });
         if (!verification.verified) {
           throw new Error("Payment verification failed. Please contact support.");
@@ -227,13 +228,16 @@ function Checkout() {
 
       const order = await placeOrder({
         address_id: Number(addressId),
-        payment_method: paymentMethod === "razorpay" ? "upi" : paymentMethod,
+        payment_method: paymentMethod,
         mock_payment_result:
           paymentMethod !== "cash_on_delivery" &&
           paymentMethod !== "razorpay" &&
           simulatePaymentFailure
             ? "failed"
             : "success",
+        razorpay_order_id: razorpayPayment?.razorpay_order_id || null,
+        razorpay_payment_id: razorpayPayment?.razorpay_payment_id || null,
+        razorpay_signature: razorpayPayment?.razorpay_signature || null,
         promo_code: appliedCoupon?.code || null,
         delivery_instruction: deliveryInstruction || null,
       });

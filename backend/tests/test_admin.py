@@ -221,6 +221,31 @@ def test_admin_can_update_order_status(client, db_session: Session) -> None:
     assert db_order.payment_status == PaymentStatus.PAID
 
 
+def test_admin_analytics_and_item_fulfillment(client, db_session: Session) -> None:
+    order_id = place_customer_order(client, db_session)
+    headers = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+    order = client.get("/admin/orders", headers=headers).json()[0]
+    item = order["items"][0]
+
+    updated = client.patch(
+        f"/admin/orders/{order_id}/items/{item['id']}",
+        json={
+            "fulfillment_status": "substituted",
+            "packed_quantity": item["quantity"],
+            "substitution_note": "Replaced with same weight fresh pack.",
+        },
+        headers=headers,
+    )
+    analytics = client.get("/admin/analytics", headers=headers)
+
+    assert updated.status_code == 200
+    assert updated.json()["items"][0]["fulfillment_status"] == "substituted"
+    assert updated.json()["items"][0]["substitution_note"]
+    assert analytics.status_code == 200
+    assert analytics.json()["gross_revenue"] >= updated.json()["total"]
+    assert analytics.json()["top_products"]
+
+
 def test_admin_can_assign_delivery_partner(client, db_session: Session) -> None:
     order_id = place_customer_order(client, db_session)
     headers = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])

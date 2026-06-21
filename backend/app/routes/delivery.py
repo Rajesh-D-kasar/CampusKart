@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.auth import require_delivery_partner
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.models import Order, OrderStatus, PaymentStatus, User, UserRole
+from app.models import DeliveryLocation, Order, OrderStatus, PaymentStatus, User, UserRole
+from app.notifications import notify_order_customer
 from app.order_handoff import (
     DROPOFF_PURPOSE,
     PICKUP_PURPOSE,
@@ -13,7 +14,19 @@ from app.order_handoff import (
     lifecycle_events,
     verify_handoff_otp,
 )
-from app.schemas import DeliveryOrderOut, DeliveryOrderStatusUpdate, DeliverySummaryOut
+from app.order_ops import (
+    finalize_reserved_inventory,
+    latest_delivery_location,
+    serialize_delivery_location,
+    serialize_order_item,
+)
+from app.schemas import (
+    DeliveryLocationOut,
+    DeliveryLocationUpdate,
+    DeliveryOrderOut,
+    DeliveryOrderStatusUpdate,
+    DeliverySummaryOut,
+)
 from app.tracking import assigned_partner_email, tracking_detail
 
 router = APIRouter(prefix="/delivery", tags=["delivery"])
@@ -46,6 +59,7 @@ def order_options():
         selectinload(Order.items),
         selectinload(Order.user),
         selectinload(Order.assigned_delivery_partner),
+        selectinload(Order.delivery_locations),
     )
 
 
@@ -70,6 +84,7 @@ def serialize_delivery_order(order: Order, db: Session) -> dict:
         "discount": paise_to_rupees(order.discount_paise),
         "total": paise_to_rupees(order.total_paise),
         **tracking_detail(order),
+        "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
         "created_at": order.created_at,
         "address_id": order.address_id,
         "delivery_address_snapshot": snapshot,
@@ -77,18 +92,7 @@ def serialize_delivery_order(order: Order, db: Session) -> dict:
         "customer_delivery_otp": None,
         **handoff_state(order, db),
         "lifecycle_events": lifecycle_events(order, db),
-        "items": [
-            {
-                "id": item.id,
-                "product_id": item.product_id,
-                "product_name": item.product_name,
-                "unit": item.unit,
-                "unit_price": paise_to_rupees(item.unit_price_paise),
-                "quantity": item.quantity,
-                "line_total": paise_to_rupees(item.line_total_paise),
-            }
-            for item in order.items
-        ],
+        "items": [serialize_order_item(item) for item in order.items],
         "updated_at": order.updated_at,
         "customer_name": order.user.full_name,
         "customer_email": order.user.email,
@@ -170,6 +174,35 @@ def list_delivery_orders(
     ]
 
 
+@router.post("/orders/{order_id}/location", response_model=DeliveryLocationOut)
+def update_delivery_location(
+    order_id: int,
+    payload: DeliveryLocationUpdate,
+    current_user: User = Depends(require_delivery_partner),
+    db: Session = Depends(get_db),
+) -> dict:
+    order = get_accessible_order(order_id, current_user, db)
+    if order.status not in {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Location can be shared after pickup starts",
+        )
+
+    location = DeliveryLocation(
+        order_id=order.id,
+        delivery_partner_id=current_user.id,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        accuracy_meters=payload.accuracy_meters,
+        battery_percent=payload.battery_percent,
+        source=payload.source,
+    )
+    db.add(location)
+    db.commit()
+    db.refresh(location)
+    return serialize_delivery_location(location)
+
+
 @router.patch("/orders/{order_id}/status", response_model=DeliveryOrderOut)
 def update_delivery_order_status(
     order_id: int,
@@ -192,9 +225,20 @@ def update_delivery_order_status(
     if next_status == OrderStatus.DELIVERED:
         verify_handoff_otp(order, db, settings, DROPOFF_PURPOSE, payload.otp)
 
+    previous_status = order.status
     order.status = next_status
+    if order.status == OrderStatus.DELIVERED and previous_status != OrderStatus.DELIVERED:
+        finalize_reserved_inventory(order, db)
     if order.status == OrderStatus.DELIVERED and order.payment_method == "cash_on_delivery":
         order.payment_status = PaymentStatus.PAID
+    if previous_status != order.status:
+        notify_order_customer(
+            db,
+            order,
+            title="Delivery update",
+            message=f"Order {order.order_number} is now {enum_value(order.status)}.",
+            event_type=f"delivery.{enum_value(order.status)}",
+        )
 
     db.commit()
     saved_order = get_accessible_order(order_id, current_user, db)

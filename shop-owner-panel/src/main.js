@@ -11,6 +11,7 @@ const state = {
   token: localStorage.getItem(TOKEN_KEY),
   user: loadStoredUser(),
   summary: null,
+  analytics: null,
   orders: [],
   deliveryPartners: [],
   supportTickets: [],
@@ -176,6 +177,7 @@ async function loadDashboard() {
   try {
     const [
       summary,
+      analytics,
       orders,
       deliveryPartners,
       supportTickets,
@@ -185,6 +187,7 @@ async function loadDashboard() {
     ] =
       await Promise.all([
       apiFetch("/admin/summary"),
+      apiFetch("/admin/analytics"),
       apiFetch("/admin/orders"),
       apiFetch("/admin/delivery-partners"),
       apiFetch("/admin/support/tickets"),
@@ -193,6 +196,7 @@ async function loadDashboard() {
       apiFetch("/admin/products"),
     ]);
     state.summary = summary;
+    state.analytics = analytics;
     state.orders = orders;
     state.deliveryPartners = deliveryPartners;
     state.supportTickets = supportTickets;
@@ -263,6 +267,24 @@ async function markOrderReady(orderId) {
     });
     state.orders = state.orders.map((item) => (item.id === orderId ? order : item));
     await loadDashboard();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderOrders();
+  }
+}
+
+async function updateOrderItem(orderId, itemId, payload) {
+  state.saving = `item-${itemId}`;
+  renderOrders();
+  try {
+    const order = await apiFetch(`/admin/orders/${orderId}/items/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    state.orders = state.orders.map((item) => (item.id === orderId ? order : item));
+    renderOrders();
   } catch (error) {
     setError(el.panelError, error.message);
   } finally {
@@ -407,12 +429,14 @@ function renderShell() {
 
 function renderStats() {
   const summary = state.summary || {};
+  const analytics = state.analytics || {};
   const cards = [
     ["Total orders", summary.total_orders || 0],
     ["Open orders", summary.open_orders || 0],
     ["Active products", summary.active_products || 0],
     ["Low stock", summary.low_stock_items || 0],
     ["Revenue", formatMoney(summary.total_revenue || 0)],
+    ["Avg order", formatMoney(analytics.average_order_value || 0)],
   ];
   el.statsGrid.innerHTML = cards
     .map(
@@ -518,11 +542,19 @@ function renderOrderCard(order) {
             ${items
               .map(
                 (item) => `
-                  <label>
-                    <input type="checkbox" data-pack-item="${order.id}-${item.id}" />
-                    <span>${escapeHtml(item.product_name)}</span>
-                    <strong>${escapeHtml(item.quantity)} x ${escapeHtml(item.unit)}</strong>
-                  </label>
+                  <div class="pack-line">
+                    <label>
+                      <input type="checkbox" ${item.fulfillment_status === "packed" ? "checked" : ""} disabled />
+                      <span>${escapeHtml(item.product_name)}</span>
+                      <strong>${escapeHtml(item.quantity)} x ${escapeHtml(item.unit)}</strong>
+                    </label>
+                    <small>${escapeHtml(formatStatus(item.fulfillment_status || "pending"))}${item.substitution_note ? ` - ${escapeHtml(item.substitution_note)}` : ""}</small>
+                    <div class="pack-actions">
+                      <button class="ghost-button small-button" data-pack-item="${order.id}:${item.id}" type="button">Packed</button>
+                      <button class="ghost-button small-button" data-substitute-item="${order.id}:${item.id}" type="button">Substitute</button>
+                      <button class="ghost-button small-button danger-button" data-unavailable-item="${order.id}:${item.id}" type="button">Unavailable</button>
+                    </div>
+                  </div>
                 `
               )
               .join("")}
@@ -843,6 +875,50 @@ el.inventorySearch.addEventListener("input", (event) => {
 });
 
 el.ordersList.addEventListener("click", async (event) => {
+  const packButton = event.target.closest("[data-pack-item]");
+  if (packButton) {
+    const [orderId, itemId] = packButton.dataset.packItem.split(":").map(Number);
+    const order = state.orders.find((item) => item.id === orderId);
+    const line = order?.items?.find((item) => item.id === itemId);
+    await updateOrderItem(orderId, itemId, {
+      fulfillment_status: "packed",
+      packed_quantity: line?.quantity || 0,
+    });
+    return;
+  }
+
+  const substituteButton = event.target.closest("[data-substitute-item]");
+  if (substituteButton) {
+    const [orderId, itemId] = substituteButton.dataset.substituteItem
+      .split(":")
+      .map(Number);
+    const note = window.prompt("Substitute note likho:");
+    if (!note?.trim()) return;
+    const order = state.orders.find((item) => item.id === orderId);
+    const line = order?.items?.find((item) => item.id === itemId);
+    await updateOrderItem(orderId, itemId, {
+      fulfillment_status: "substituted",
+      packed_quantity: line?.quantity || 0,
+      substitution_note: note.trim(),
+    });
+    return;
+  }
+
+  const unavailableButton = event.target.closest("[data-unavailable-item]");
+  if (unavailableButton) {
+    const [orderId, itemId] = unavailableButton.dataset.unavailableItem
+      .split(":")
+      .map(Number);
+    const note = window.prompt("Unavailable reason likho:");
+    if (!note?.trim()) return;
+    await updateOrderItem(orderId, itemId, {
+      fulfillment_status: "unavailable",
+      packed_quantity: 0,
+      substitution_note: note.trim(),
+    });
+    return;
+  }
+
   const readyButton = event.target.closest("[data-ready-order]");
   if (readyButton) {
     await markOrderReady(Number(readyButton.dataset.readyOrder));

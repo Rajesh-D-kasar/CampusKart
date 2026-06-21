@@ -18,6 +18,14 @@ from app.models import (
     User,
     UserRole,
 )
+from app.notifications import notify_order_customer
+from app.order_ops import (
+    cancel_order,
+    finalize_reserved_inventory,
+    latest_delivery_location,
+    serialize_delivery_location,
+    serialize_order_item,
+)
 from app.delivery_assignment import (
     delivery_partners,
     ensure_delivery_assignment,
@@ -30,6 +38,8 @@ from app.schemas import (
     AdminDeliveryPartnerOut,
     AdminInventoryOut,
     AdminInventoryUpdate,
+    AdminAnalyticsOut,
+    AdminOrderItemFulfillmentUpdate,
     AdminOrderAssignmentUpdate,
     AdminOrderOut,
     AdminOrderStatusUpdate,
@@ -88,6 +98,7 @@ def order_options():
         selectinload(Order.items),
         selectinload(Order.user),
         selectinload(Order.assigned_delivery_partner),
+        selectinload(Order.delivery_locations),
     )
 
 
@@ -131,18 +142,7 @@ def ensure_unique_product_slug(
 
 
 def serialize_order_items(order: Order) -> list[dict]:
-    return [
-        {
-            "id": item.id,
-            "product_id": item.product_id,
-            "product_name": item.product_name,
-            "unit": item.unit,
-            "unit_price": paise_to_rupees(item.unit_price_paise),
-            "quantity": item.quantity,
-            "line_total": paise_to_rupees(item.line_total_paise),
-        }
-        for item in order.items
-    ]
+    return [serialize_order_item(item) for item in order.items]
 
 
 def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict:
@@ -160,6 +160,7 @@ def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict
         "discount": paise_to_rupees(order.discount_paise),
         "total": paise_to_rupees(order.total_paise),
         **tracking_summary(order),
+        "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
         "created_at": order.created_at,
         "customer_name": order.user.full_name,
         "customer_email": order.user.email,
@@ -281,6 +282,58 @@ def read_admin_summary(
     }
 
 
+@router.get("/analytics", response_model=AdminAnalyticsOut)
+def read_admin_analytics(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    orders = list(
+        db.scalars(select(Order).options(selectinload(Order.items))).all()
+    )
+    active_orders = [order for order in orders if order.status != OrderStatus.CANCELLED]
+    paid_orders = [order for order in active_orders if order.payment_status == PaymentStatus.PAID]
+    orders_by_status = {status.value: 0 for status in OrderStatus}
+    payment_mix: dict[str, int] = {}
+    top_products: dict[str, dict[str, int]] = {}
+
+    for order in orders:
+        orders_by_status[enum_value(order.status)] += 1
+        payment_mix[order.payment_method] = payment_mix.get(order.payment_method, 0) + 1
+        if order.status == OrderStatus.CANCELLED:
+            continue
+        for item in order.items:
+            product = top_products.setdefault(
+                item.product_name,
+                {"quantity": 0, "revenue_paise": 0},
+            )
+            product["quantity"] += item.quantity
+            product["revenue_paise"] += item.line_total_paise
+
+    gross_revenue_paise = sum(order.total_paise for order in active_orders)
+    paid_revenue_paise = sum(order.total_paise for order in paid_orders)
+    return {
+        "gross_revenue": paise_to_rupees(gross_revenue_paise),
+        "paid_revenue": paise_to_rupees(paid_revenue_paise),
+        "average_order_value": paise_to_rupees(
+            round(gross_revenue_paise / len(active_orders)) if active_orders else 0
+        ),
+        "orders_by_status": orders_by_status,
+        "payment_mix": payment_mix,
+        "top_products": [
+            {
+                "product_name": name,
+                "quantity": values["quantity"],
+                "revenue": paise_to_rupees(values["revenue_paise"]),
+            }
+            for name, values in sorted(
+                top_products.items(),
+                key=lambda item: item[1]["quantity"],
+                reverse=True,
+            )[:5]
+        ],
+    }
+
+
 @router.get("/orders", response_model=list[AdminOrderOut])
 def list_admin_orders(
     _admin: User = Depends(require_admin),
@@ -317,7 +370,19 @@ def update_order_status(
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    order.status = OrderStatus(payload.status)
+    previous_status = order.status
+    next_status = OrderStatus(payload.status)
+    if next_status == OrderStatus.CANCELLED:
+        try:
+            cancel_order(order, db)
+        except ValueError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(error),
+            ) from error
+    else:
+        order.status = next_status
+
     if order.status in {
         OrderStatus.CONFIRMED,
         OrderStatus.PACKING,
@@ -325,8 +390,18 @@ def update_order_status(
         OrderStatus.DELIVERED,
     }:
         ensure_delivery_assignment(order, db)
+    if order.status == OrderStatus.DELIVERED and previous_status != OrderStatus.DELIVERED:
+        finalize_reserved_inventory(order, db)
     if order.status == OrderStatus.DELIVERED and order.payment_method == "cash_on_delivery":
         order.payment_status = PaymentStatus.PAID
+    if previous_status != order.status:
+        notify_order_customer(
+            db,
+            order,
+            title="Order update",
+            message=f"Order {order.order_number} is now {enum_value(order.status)}.",
+            event_type=f"order.{enum_value(order.status)}",
+        )
 
     db.commit()
     db.refresh(order)
@@ -396,6 +471,59 @@ def mark_order_ready(
     mark_store_ready(order, db)
     if order.status == OrderStatus.CONFIRMED:
         order.status = OrderStatus.PACKING
+    notify_order_customer(
+        db,
+        order,
+        title="Order packed",
+        message=f"Order {order.order_number} is packed and ready for pickup.",
+        event_type="order.ready_for_pickup",
+    )
+
+    db.commit()
+    saved_order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    assert saved_order is not None
+    return serialize_admin_order(saved_order, db, settings)
+
+
+@router.patch("/orders/{order_id}/items/{item_id}", response_model=AdminOrderOut)
+def update_order_item_fulfillment(
+    order_id: int,
+    item_id: int,
+    payload: AdminOrderItemFulfillmentUpdate,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status in {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.CANCELLED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot change item packing after pickup has started",
+        )
+
+    item = next((line for line in order.items if line.id == item_id), None)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Order item not found")
+
+    if payload.packed_quantity is not None:
+        if payload.packed_quantity > item.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail="Packed quantity cannot exceed ordered quantity",
+            )
+        item.packed_quantity = payload.packed_quantity
+    if payload.fulfillment_status is not None:
+        item.fulfillment_status = payload.fulfillment_status
+        if payload.fulfillment_status == "packed" and item.packed_quantity == 0:
+            item.packed_quantity = item.quantity
+    if payload.substitution_note is not None:
+        item.substitution_note = payload.substitution_note.strip() or None
 
     db.commit()
     saved_order = db.scalar(

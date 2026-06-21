@@ -688,6 +688,27 @@ a {
   line-height: 1.5;
 }
 
+.location-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #dcf3e3;
+  border-radius: 16px;
+  background: #f7fff9;
+}
+
+.location-card span {
+  color: #5f6d61;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.location-card a {
+  color: #137333;
+  font-weight: 900;
+}
+
 .done-pill {
   color: #1f8f3a;
   background: #ecfae8;

@@ -386,6 +386,13 @@ class Order(TimestampMixin, Base):
     handoff_verification: Mapped[Optional["OrderHandoffVerification"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", uselist=False
     )
+    payment_transactions: Mapped[list["PaymentTransaction"]] = relationship(
+        back_populates="order"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(back_populates="order")
+    delivery_locations: Mapped[list["DeliveryLocation"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
 
 
 class OrderHandoffVerification(TimestampMixin, Base):
@@ -429,9 +436,98 @@ class OrderItem(TimestampMixin, Base):
     unit_price_paise: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer)
     line_total_paise: Mapped[int] = mapped_column(Integer)
+    packed_quantity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    fulfillment_status: Mapped[str] = mapped_column(
+        String(30), default="pending", server_default="pending", index=True
+    )
+    substitution_note: Mapped[Optional[str]] = mapped_column(String(255))
 
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped[Optional["Product"]] = relationship(back_populates="order_items")
+
+
+class PaymentTransaction(TimestampMixin, Base):
+    __tablename__ = "payment_transactions"
+    __table_args__ = (
+        Index("ix_payment_transactions_order_created", "order_id", "created_at"),
+        Index("ix_payment_transactions_provider_order", "provider", "provider_order_id"),
+        Index(
+            "ix_payment_transactions_provider_payment",
+            "provider",
+            "provider_payment_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("orders.id", ondelete="SET NULL"), index=True
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(40), default="razorpay")
+    provider_order_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    provider_payment_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    provider_refund_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    event_type: Mapped[str] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(String(40), index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    currency: Mapped[str] = mapped_column(String(3), default="INR", server_default="INR")
+    verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    signature: Mapped[Optional[str]] = mapped_column(String(255))
+    raw_payload: Mapped[Optional[dict]] = mapped_column(JSON)
+
+    order: Mapped[Optional["Order"]] = relationship(back_populates="payment_transactions")
+    user: Mapped[Optional["User"]] = relationship(foreign_keys=[user_id])
+
+
+class Notification(TimestampMixin, Base):
+    __tablename__ = "notifications"
+    __table_args__ = (
+        Index("ix_notifications_user_read_created", "user_id", "is_read", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    order_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("orders.id", ondelete="SET NULL"), index=True
+    )
+    channel: Mapped[str] = mapped_column(String(30), default="in_app")
+    event_type: Mapped[str] = mapped_column(String(80), index=True)
+    title: Mapped[str] = mapped_column(String(140))
+    message: Mapped[str] = mapped_column(String(500))
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSON)
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    order: Mapped[Optional["Order"]] = relationship(back_populates="notifications")
+
+
+class DeliveryLocation(TimestampMixin, Base):
+    __tablename__ = "delivery_locations"
+    __table_args__ = (
+        Index("ix_delivery_locations_order_created", "order_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), index=True
+    )
+    delivery_partner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    latitude: Mapped[float] = mapped_column(Numeric(9, 6))
+    longitude: Mapped[float] = mapped_column(Numeric(9, 6))
+    accuracy_meters: Mapped[Optional[float]] = mapped_column(Numeric(8, 2))
+    battery_percent: Mapped[Optional[int]] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String(40), default="browser")
+
+    order: Mapped["Order"] = relationship(back_populates="delivery_locations")
+    delivery_partner: Mapped["User"] = relationship(foreign_keys=[delivery_partner_id])
 
 
 class SupportTicket(TimestampMixin, Base):

@@ -114,6 +114,16 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
         json={"status": "out_for_delivery", "otp": pickup_otp},
         headers=headers,
     )
+    location = client.post(
+        f"/delivery/orders/{order.id}/location",
+        json={
+            "latitude": 18.5204,
+            "longitude": 73.8567,
+            "accuracy_meters": 12.5,
+            "battery_percent": 82,
+        },
+        headers=headers,
+    )
     customer_otp = customer_delivery_otp_for_order(client, order.id, customer)
     delivered = client.patch(
         f"/delivery/orders/{order.id}/status",
@@ -131,6 +141,8 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
     assert out_for_delivery.json()["status"] == "out_for_delivery"
     assert out_for_delivery.json()["pickup_verified"] is True
     assert out_for_delivery.json()["dropoff_verified"] is False
+    assert location.status_code == 200
+    assert location.json()["latitude"] == 18.5204
     assert delivered.json()["status"] == "delivered"
     assert delivered.json()["payment_status"] == "paid"
     assert delivered.json()["dropoff_verified"] is True

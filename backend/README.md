@@ -2,8 +2,9 @@
 
 FastAPI backend for the CampusKart quick-commerce app. It handles catalog,
 offers, coupon previews, authentication, cart sync, addresses, checkout, mock
-payments, Razorpay-ready payment hooks, ETA tracking, orders, inventory
-reservation, delivery operations, and admin catalog/store operations.
+payments, Razorpay checkout/webhooks, ETA tracking, notifications, invoices,
+orders, inventory reservation, delivery operations, and admin catalog/store
+operations.
 
 ## Stack
 
@@ -15,7 +16,7 @@ reservation, delivery operations, and admin catalog/store operations.
 - Argon2 password hashing
 - SQLite for local one-click development
 - PostgreSQL support through Docker Compose
-- Razorpay order/signature verification hooks
+- Razorpay order, signature verification, webhook, and payment history hooks
 - Customer OTP login with expiry, cooldown, attempt limits, and SMTP-ready delivery
 - Trusted host middleware and security response headers
 
@@ -68,6 +69,9 @@ Alembic creates the commerce schema:
 - `cart_items`
 - `orders`
 - `order_items`
+- `payment_transactions`
+- `notifications`
+- `delivery_locations`
 
 ## Seed Data
 
@@ -110,10 +114,11 @@ Delivery partners can use `/delivery` after an order is confirmed or packing.
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
-| Delivery | `GET /delivery/orders`, `PATCH /delivery/orders/{id}/status` |
-| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify` |
-| Admin | `GET /admin/summary`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
+| Delivery | `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
+| Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
+| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/webhook` |
+| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 Interactive docs:
 
@@ -161,5 +166,5 @@ Tests use an isolated SQLite database and do not alter local development data.
 Current expected result:
 
 ```text
-39 passed
+50 passed
 ```

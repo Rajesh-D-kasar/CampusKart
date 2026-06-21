@@ -14,19 +14,36 @@ from app.models import (
     Inventory,
     Order,
     OrderItem,
+    OrderStatus,
     PaymentStatus,
+    PaymentTransaction,
     Product,
     Store,
     User,
 )
+from app.notifications import notify_order_customer
 from app.order_handoff import customer_dropoff_otp, handoff_state, lifecycle_events
+from app.order_ops import (
+    cancel_order,
+    invoice_for_order,
+    latest_delivery_location,
+    serialize_delivery_location,
+    serialize_order_item,
+)
+from app.payment_utils import verify_razorpay_payment_signature
 from app.promotions import PromotionError, apply_coupon
 from app.routes.cart import (
     DELIVERY_FEE_PAISE,
     FREE_DELIVERY_THRESHOLD_PAISE,
     get_or_create_cart,
 )
-from app.schemas import OrderCreate, OrderOut, OrderSummaryOut
+from app.schemas import (
+    OrderCancelRequest,
+    OrderCreate,
+    OrderInvoiceOut,
+    OrderOut,
+    OrderSummaryOut,
+)
 from app.tracking import tracking_detail, tracking_summary
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -72,6 +89,7 @@ def serialize_order_summary(order: Order) -> dict:
         "discount": paise_to_rupees(order.discount_paise),
         "total": paise_to_rupees(order.total_paise),
         **tracking_summary(order),
+        "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
         "created_at": order.created_at,
     }
 
@@ -87,18 +105,7 @@ def serialize_order(order: Order, db: Session, settings: Settings) -> dict:
             "customer_delivery_otp": customer_dropoff_otp(order, db, settings),
             **handoff_state(order, db),
             "lifecycle_events": lifecycle_events(order, db),
-            "items": [
-                {
-                    "id": item.id,
-                    "product_id": item.product_id,
-                    "product_name": item.product_name,
-                    "unit": item.unit,
-                    "unit_price": paise_to_rupees(item.unit_price_paise),
-                    "quantity": item.quantity,
-                    "line_total": paise_to_rupees(item.line_total_paise),
-                }
-                for item in order.items
-            ],
+            "items": [serialize_order_item(item) for item in order.items],
             "updated_at": order.updated_at,
         }
     )
@@ -106,7 +113,12 @@ def serialize_order(order: Order, db: Session, settings: Settings) -> dict:
 
 
 def order_options():
-    return selectinload(Order.items), selectinload(Order.assigned_delivery_partner)
+    return (
+        selectinload(Order.items),
+        selectinload(Order.user),
+        selectinload(Order.assigned_delivery_partner),
+        selectinload(Order.delivery_locations),
+    )
 
 
 def get_owned_order(order_id: int, user_id: int, db: Session) -> Order:
@@ -168,6 +180,31 @@ def place_order(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="Payment failed. Please try again or choose cash on delivery.",
         )
+    if payload.payment_method == "razorpay":
+        if not settings.razorpay_key_secret:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Razorpay credentials are not configured",
+            )
+        if not (
+            payload.razorpay_order_id
+            and payload.razorpay_payment_id
+            and payload.razorpay_signature
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Razorpay payment proof is required",
+            )
+        if not verify_razorpay_payment_signature(
+            secret=settings.razorpay_key_secret,
+            razorpay_order_id=payload.razorpay_order_id,
+            razorpay_payment_id=payload.razorpay_payment_id,
+            razorpay_signature=payload.razorpay_signature,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Razorpay payment verification failed",
+            )
 
     subtotal_paise = 0
     reserved_items: list[tuple[Inventory, int]] = []
@@ -222,7 +259,7 @@ def place_order(
         payment_method=payload.payment_method,
         payment_status=(
             PaymentStatus.PAID
-            if payload.payment_method in {"upi", "card"}
+            if payload.payment_method in {"upi", "card", "razorpay"}
             else PaymentStatus.PENDING
         ),
         subtotal_paise=subtotal_paise,
@@ -233,6 +270,35 @@ def place_order(
     )
     order.items.extend(order_items)
     db.add(order)
+    db.flush()
+
+    if payload.payment_method == "razorpay":
+        db.add(
+            PaymentTransaction(
+                order_id=order.id,
+                user_id=current_user.id,
+                provider="razorpay",
+                provider_order_id=payload.razorpay_order_id,
+                provider_payment_id=payload.razorpay_payment_id,
+                event_type="order_paid",
+                status="paid",
+                amount_paise=order.total_paise,
+                currency="INR",
+                verified=True,
+                signature=payload.razorpay_signature,
+                raw_payload={
+                    "source": "checkout",
+                    "order_number": order.order_number,
+                },
+            )
+        )
+    notify_order_customer(
+        db,
+        order,
+        title="Order placed",
+        message=f"Order {order.order_number} placed successfully.",
+        event_type="order.placed",
+    )
 
     for inventory, quantity in reserved_items:
         inventory.reserved_quantity += quantity
@@ -268,3 +334,55 @@ def read_order(
     settings: Settings = Depends(get_settings),
 ) -> dict:
     return serialize_order(get_owned_order(order_id, current_user.id, db), db, settings)
+
+
+@router.patch("/{order_id}/cancel", response_model=OrderOut)
+def cancel_my_order(
+    order_id: int,
+    payload: OrderCancelRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    order = get_owned_order(order_id, current_user.id, db)
+    previous_payment_status = order.payment_status
+    try:
+        cancel_order(order, db)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+    if previous_payment_status == PaymentStatus.PAID:
+        db.add(
+            PaymentTransaction(
+                order_id=order.id,
+                user_id=current_user.id,
+                provider=order.payment_method,
+                event_type="refund_initiated",
+                status="refunded",
+                amount_paise=order.total_paise,
+                currency="INR",
+                verified=True,
+                raw_payload={"reason": payload.reason if payload else None},
+            )
+        )
+    notify_order_customer(
+        db,
+        order,
+        title="Order cancelled",
+        message=f"Order {order.order_number} has been cancelled.",
+        event_type="order.cancelled",
+        metadata={"reason": payload.reason if payload else None},
+    )
+    db.commit()
+    saved_order = get_owned_order(order_id, current_user.id, db)
+    return serialize_order(saved_order, db, settings)
+
+
+@router.get("/{order_id}/invoice", response_model=OrderInvoiceOut)
+def read_order_invoice(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    order = get_owned_order(order_id, current_user.id, db)
+    return invoice_for_order(order)

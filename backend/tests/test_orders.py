@@ -217,3 +217,43 @@ def test_place_order_rejects_another_users_address(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Address not found"
+
+
+def test_customer_can_cancel_order_and_release_reserved_stock(
+    client,
+    db_session: Session,
+) -> None:
+    headers = auth_headers(client, email="cancel-order@example.com")
+    product = first_product(db_session)
+    inventory = db_session.scalar(
+        select(Inventory).where(Inventory.product_id == product.id)
+    )
+    assert inventory is not None
+    reserved_before = inventory.reserved_quantity
+    address = client.post("/addresses", json=address_payload(), headers=headers)
+    client.post(
+        "/cart/items",
+        json={"product_id": product.id, "quantity": 1},
+        headers=headers,
+    )
+    order = client.post(
+        "/orders",
+        json={"address_id": address.json()["id"]},
+        headers=headers,
+    )
+    db_session.refresh(inventory)
+    assert inventory.reserved_quantity == reserved_before + 1
+
+    cancelled = client.patch(
+        f"/orders/{order.json()['id']}/cancel",
+        json={"reason": "Ordered by mistake"},
+        headers=headers,
+    )
+    notifications = client.get("/notifications", headers=headers)
+    db_session.refresh(inventory)
+
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    assert inventory.reserved_quantity == reserved_before
+    assert notifications.status_code == 200
+    assert notifications.json()[0]["event_type"] == "order.cancelled"

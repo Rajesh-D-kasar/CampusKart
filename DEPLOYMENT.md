@@ -25,7 +25,7 @@ CORS_ORIGINS=["https://your-customer-app.vercel.app","https://your-delivery-pane
 ALLOWED_HOSTS=["your-api.onrender.com","localhost","127.0.0.1"]
 RAZORPAY_KEY_ID=rzp_live_or_test_key
 RAZORPAY_KEY_SECRET=rzp_live_or_test_secret
-RAZORPAY_WEBHOOK_SECRET=
+RAZORPAY_WEBHOOK_SECRET=copy-from-razorpay-dashboard-webhook-settings
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USERNAME=
@@ -67,7 +67,11 @@ VITE_SHOP_OWNER_PANEL_URL=https://your-shop-panel.vercel.app
 - Verify customer OTP email delivery in SMTP mode.
 - Test one cash-on-delivery order end to end.
 - Test one Razorpay test-mode payment end to end.
+- Configure the Razorpay webhook URL:
+  `https://your-api.onrender.com/payments/razorpay/webhook`.
+- Enable Razorpay `payment.captured`, `payment.failed`, and refund events.
 - Confirm shop pickup OTP and customer delivery OTP both work.
+- Confirm delivery partner live location sharing works over HTTPS.
 - Confirm customer, delivery partner, and seller support tickets can receive replies.
 - Add the deployed domains to backend `CORS_ORIGINS` and `ALLOWED_HOSTS`.
 - Rotate `JWT_SECRET_KEY` if it was ever shared in screenshots or logs.
