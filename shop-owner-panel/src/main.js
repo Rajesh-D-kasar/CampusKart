@@ -12,6 +12,7 @@ const state = {
   user: loadStoredUser(),
   summary: null,
   analytics: null,
+  settlement: null,
   orders: [],
   deliveryPartners: [],
   supportTickets: [],
@@ -178,6 +179,7 @@ async function loadDashboard() {
     const [
       summary,
       analytics,
+      settlement,
       orders,
       deliveryPartners,
       supportTickets,
@@ -188,6 +190,7 @@ async function loadDashboard() {
       await Promise.all([
       apiFetch("/admin/summary"),
       apiFetch("/admin/analytics"),
+      apiFetch("/admin/settlements"),
       apiFetch("/admin/orders"),
       apiFetch("/admin/delivery-partners"),
       apiFetch("/admin/support/tickets"),
@@ -197,6 +200,7 @@ async function loadDashboard() {
     ]);
     state.summary = summary;
     state.analytics = analytics;
+    state.settlement = settlement;
     state.orders = orders;
     state.deliveryPartners = deliveryPartners;
     state.supportTickets = supportTickets;
@@ -294,8 +298,19 @@ async function updateOrderItem(orderId, itemId, payload) {
 }
 
 async function refundRazorpayOrder(orderId) {
+  const order = state.orders.find((item) => item.id === orderId);
+  const amountInput = window.prompt(
+    `Refund amount likho. Blank chhodo to remaining/full refund hoga. Order total: ${formatMoney(order?.total || 0)}`,
+    ""
+  );
+  if (amountInput === null) return;
   const reason = window.prompt("Refund reason likho:", "Customer requested refund");
   if (reason === null) return;
+  const amount = amountInput.trim() ? Number(amountInput.trim()) : null;
+  if (amount !== null && (!Number.isFinite(amount) || amount <= 0)) {
+    setError(el.panelError, "Refund amount valid positive number hona chahiye.");
+    return;
+  }
   state.saving = `refund-${orderId}`;
   renderOrders();
   try {
@@ -303,9 +318,25 @@ async function refundRazorpayOrder(orderId) {
       method: "POST",
       body: JSON.stringify({
         order_id: orderId,
+        amount,
         reason: reason.trim() || "Admin refund",
       }),
     });
+    await loadDashboard();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderOrders();
+  }
+}
+
+async function checkRefundStatus(refundId) {
+  state.saving = `refund-status-${refundId}`;
+  renderOrders();
+  try {
+    const refund = await apiFetch(`/payments/razorpay/refunds/${refundId}`);
+    window.alert(`Refund ${refund.refund_id}: ${formatStatus(refund.status)}`);
     await loadDashboard();
   } catch (error) {
     setError(el.panelError, error.message);
@@ -452,6 +483,7 @@ function renderShell() {
 function renderStats() {
   const summary = state.summary || {};
   const analytics = state.analytics || {};
+  const settlement = state.settlement || {};
   const cards = [
     ["Total orders", summary.total_orders || 0],
     ["Open orders", summary.open_orders || 0],
@@ -459,6 +491,8 @@ function renderStats() {
     ["Low stock", summary.low_stock_items || 0],
     ["Revenue", formatMoney(summary.total_revenue || 0)],
     ["Avg order", formatMoney(analytics.average_order_value || 0)],
+    ["Net settlement", formatMoney(settlement.net_settlement || 0)],
+    ["Refunded", formatMoney(settlement.refunded_total || 0)],
   ];
   el.statsGrid.innerHTML = cards
     .map(
@@ -541,6 +575,9 @@ function renderOrderCard(order) {
     ["confirmed", "packing"].includes(order.status) && !order.store_ready;
   const canRefund =
     order.payment_method === "razorpay" && order.payment_status === "paid";
+  const latestRefund = (order.payment_transactions || []).find(
+    (transaction) => transaction.provider_refund_id
+  );
   return `
     <article class="order-card">
       <div class="order-main">
@@ -556,6 +593,24 @@ function renderOrderCard(order) {
         </div>
       </div>
       <p class="order-note">${escapeHtml(order.tracking_message || "Order update pending")}</p>
+      ${
+        order.payment_transactions?.length
+          ? `<div class="payment-history">
+              ${(order.payment_transactions || [])
+                .slice(0, 3)
+                .map(
+                  (transaction) => `
+                    <span>
+                      ${escapeHtml(formatStatus(transaction.event_type))} -
+                      ${formatMoney(transaction.amount)} -
+                      ${escapeHtml(formatStatus(transaction.status))}
+                    </span>
+                  `
+                )
+                .join("")}
+            </div>`
+          : ""
+      }
       <div class="fulfillment-grid">
         <section class="pack-card">
           <div>
@@ -684,6 +739,20 @@ function renderOrderCard(order) {
                 type="button"
               >
                 ${state.saving === `refund-${order.id}` ? "Refunding..." : "Refund Razorpay"}
+              </button>
+            `
+            : ""
+        }
+        ${
+          latestRefund
+            ? `
+              <button
+                class="ghost-button"
+                data-refund-status="${escapeHtml(latestRefund.provider_refund_id)}"
+                ${state.saving === `refund-status-${latestRefund.provider_refund_id}` ? "disabled" : ""}
+                type="button"
+              >
+                ${state.saving === `refund-status-${latestRefund.provider_refund_id}` ? "Checking..." : "Check refund"}
               </button>
             `
             : ""
@@ -960,6 +1029,12 @@ el.ordersList.addEventListener("click", async (event) => {
   const refundButton = event.target.closest("[data-refund-order]");
   if (refundButton) {
     await refundRazorpayOrder(Number(refundButton.dataset.refundOrder));
+    return;
+  }
+
+  const refundStatusButton = event.target.closest("[data-refund-status]");
+  if (refundStatusButton) {
+    await checkRefundStatus(refundStatusButton.dataset.refundStatus);
     return;
   }
 

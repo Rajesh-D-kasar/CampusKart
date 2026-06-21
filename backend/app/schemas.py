@@ -399,6 +399,17 @@ class RazorpayRefundOut(BaseModel):
     payment_status: str
 
 
+class RazorpayRefundStatusOut(BaseModel):
+    provider: str = "razorpay"
+    order_id: int | None = None
+    refund_id: str
+    payment_id: str | None = None
+    amount: float = Field(ge=0)
+    currency: str
+    status: str
+    payment_status: str | None = None
+
+
 class RazorpayWebhookOut(BaseModel):
     provider: str = "razorpay"
     received: bool
@@ -448,6 +459,17 @@ class AdminAnalyticsOut(BaseModel):
     top_products: list[AdminTopProductOut]
 
 
+class AdminSettlementReportOut(BaseModel):
+    paid_revenue: float = Field(ge=0)
+    razorpay_paid: float = Field(ge=0)
+    cod_collected: float = Field(ge=0)
+    cod_pending: float = Field(ge=0)
+    refunded_total: float = Field(ge=0)
+    net_settlement: float = Field(ge=0)
+    transaction_count: int = Field(ge=0)
+    refund_count: int = Field(ge=0)
+
+
 class AdminOrderOut(OrderSummaryOut):
     customer_name: str
     customer_email: EmailStr
@@ -464,6 +486,7 @@ class AdminOrderOut(OrderSummaryOut):
     pickup_verified_at: datetime | None = None
     dropoff_verified_at: datetime | None = None
     lifecycle_events: list[OrderLifecycleEventOut] = Field(default_factory=list)
+    payment_transactions: list[PaymentTransactionOut] = Field(default_factory=list)
 
 
 class AdminOrderStatusUpdate(BaseModel):

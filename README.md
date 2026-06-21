@@ -28,6 +28,7 @@ run locally, but structured like a real commerce system.
 - Cash-on-delivery, mock UPI/card, and Razorpay checkout flows
 - Razorpay payment order, checkout verification, webhook reconciliation, and payment history
 - Admin-triggered Razorpay refund execution for paid gateway orders
+- Refund status sync, payment transaction history, and settlement summary
 - Store-level inventory and stock reservation during checkout
 - My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
@@ -205,6 +206,7 @@ It includes:
 - quick order status buttons
 - item-level packing, substitution, and unavailable-item marking
 - Razorpay refund button for paid Razorpay orders
+- settlement cards and refund status check for shop owners
 - low-stock warning list
 - stock quantity and reorder alert updates
 - edit product price, MRP, image URL, and active status
@@ -232,8 +234,8 @@ VITE_API_URL=https://your-api-domain.example
 | Delivery | `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
-| Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `POST /payments/razorpay/webhook` |
-| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+| Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
+| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 ## Development Accounts
 
@@ -277,6 +279,10 @@ checkout. The backend exposes Razorpay-ready endpoints:
   payment events, and updates matched order payment status.
 - `POST /payments/razorpay/refunds` lets admins execute a Razorpay refund for
   a paid Razorpay order and records the refund transaction.
+- `GET /payments/razorpay/refunds/{refund_id}` refreshes local refund status
+  from Razorpay.
+- `GET /payments/transactions` returns recent payment/refund transactions for
+  admin reporting.
 
 Copy `backend/.env.example` to `backend/.env` and fill the Razorpay variables
 before using real gateway calls. In the customer app, choose the Razorpay payment

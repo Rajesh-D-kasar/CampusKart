@@ -68,6 +68,7 @@ VITE_SHOP_OWNER_PANEL_URL=https://your-shop-panel.vercel.app
 - Test one cash-on-delivery order end to end.
 - Test one Razorpay test-mode payment end to end.
 - Test one Razorpay test-mode refund from the shop owner panel.
+- Check the refund status button after the test refund and verify settlement cards update.
 - Configure the Razorpay webhook URL:
   `https://your-api.onrender.com/payments/razorpay/webhook`.
 - Enable Razorpay `payment.captured`, `payment.failed`, and refund events.

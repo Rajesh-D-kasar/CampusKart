@@ -237,6 +237,7 @@ def test_admin_analytics_and_item_fulfillment(client, db_session: Session) -> No
         headers=headers,
     )
     analytics = client.get("/admin/analytics", headers=headers)
+    settlements = client.get("/admin/settlements", headers=headers)
 
     assert updated.status_code == 200
     assert updated.json()["items"][0]["fulfillment_status"] == "substituted"
@@ -244,6 +245,8 @@ def test_admin_analytics_and_item_fulfillment(client, db_session: Session) -> No
     assert analytics.status_code == 200
     assert analytics.json()["gross_revenue"] >= updated.json()["total"]
     assert analytics.json()["top_products"]
+    assert settlements.status_code == 200
+    assert settlements.json()["net_settlement"] >= 0
 
 
 def test_admin_can_assign_delivery_partner(client, db_session: Session) -> None:

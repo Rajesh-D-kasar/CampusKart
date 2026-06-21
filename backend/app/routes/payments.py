@@ -13,6 +13,7 @@ from app.config import Settings, get_settings
 from app.database import get_db
 from app.models import Order, PaymentStatus, PaymentTransaction, User
 from app.notifications import notify_order_customer
+from app.order_ops import refund_totals_by_refund_id
 from app.payment_utils import (
     verify_razorpay_payment_signature,
     verify_razorpay_webhook_signature,
@@ -22,9 +23,11 @@ from app.schemas import (
     RazorpayOrderOut,
     RazorpayRefundCreate,
     RazorpayRefundOut,
+    RazorpayRefundStatusOut,
     RazorpayWebhookOut,
     RazorpayVerifyOut,
     RazorpayVerifyRequest,
+    PaymentTransactionOut,
 )
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -145,6 +148,47 @@ def latest_razorpay_payment_transaction(order_id: int, db: Session) -> PaymentTr
     )
 
 
+def refunded_amount_paise(order_id: int, db: Session) -> int:
+    refund_transactions = db.scalars(
+        select(PaymentTransaction).where(
+            PaymentTransaction.order_id == order_id,
+            PaymentTransaction.provider == "razorpay",
+            PaymentTransaction.provider_refund_id.is_not(None),
+        )
+    ).all()
+    return sum(refund_totals_by_refund_id(refund_transactions).values())
+
+
+def serialize_transaction(transaction: PaymentTransaction) -> dict:
+    return {
+        "id": transaction.id,
+        "order_id": transaction.order_id,
+        "provider": transaction.provider,
+        "provider_order_id": transaction.provider_order_id,
+        "provider_payment_id": transaction.provider_payment_id,
+        "provider_refund_id": transaction.provider_refund_id,
+        "event_type": transaction.event_type,
+        "status": transaction.status,
+        "amount": paise_to_rupees(transaction.amount_paise),
+        "currency": transaction.currency,
+        "verified": transaction.verified,
+        "created_at": transaction.created_at,
+    }
+
+
+@router.get("/transactions", response_model=list[PaymentTransactionOut])
+def list_payment_transactions(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    transactions = db.scalars(
+        select(PaymentTransaction)
+        .order_by(PaymentTransaction.created_at.desc(), PaymentTransaction.id.desc())
+        .limit(100)
+    ).all()
+    return [serialize_transaction(transaction) for transaction in transactions]
+
+
 @router.post("/razorpay/orders", response_model=RazorpayOrderOut)
 def create_razorpay_order(
     payload: RazorpayOrderCreate,
@@ -244,7 +288,7 @@ def create_razorpay_refund(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only Razorpay orders can be refunded through this endpoint",
         )
-    if order.payment_status != PaymentStatus.PAID:
+    if order.payment_status not in {PaymentStatus.PAID, PaymentStatus.REFUNDED}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only paid Razorpay orders can be refunded",
@@ -257,15 +301,23 @@ def create_razorpay_refund(
             detail="Razorpay payment id is not available for this order",
         )
 
+    already_refunded_paise = refunded_amount_paise(order.id, db)
+    refundable_paise = order.total_paise - already_refunded_paise
+    if refundable_paise <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This order has already been fully refunded",
+        )
+
     amount_paise = (
         rupees_to_paise(payload.amount)
         if payload.amount is not None
-        else order.total_paise
+        else refundable_paise
     )
-    if amount_paise <= 0 or amount_paise > order.total_paise:
+    if amount_paise <= 0 or amount_paise > refundable_paise:
         raise HTTPException(
             status_code=400,
-            detail="Refund amount must be between 1 and the order total",
+            detail="Refund amount must be between 1 and the remaining refundable amount",
         )
 
     request_body = {
@@ -309,7 +361,11 @@ def create_razorpay_refund(
             detail="Razorpay refund response did not include a refund id",
         )
 
-    order.payment_status = PaymentStatus.REFUNDED
+    order.payment_status = (
+        PaymentStatus.REFUNDED
+        if already_refunded_paise + int(data.get("amount") or amount_paise) >= order.total_paise
+        else PaymentStatus.PAID
+    )
     record_payment_transaction(
         db,
         event_type="refund_requested",
@@ -342,6 +398,73 @@ def create_razorpay_refund(
         "currency": data.get("currency") or "INR",
         "status": data.get("status", "processed"),
         "payment_status": enum_value(order.payment_status),
+    }
+
+
+@router.get("/razorpay/refunds/{refund_id}", response_model=RazorpayRefundStatusOut)
+def read_razorpay_refund_status(
+    refund_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    require_razorpay_settings(settings)
+
+    transaction = db.scalar(
+        select(PaymentTransaction)
+        .where(
+            PaymentTransaction.provider == "razorpay",
+            PaymentTransaction.provider_refund_id == refund_id,
+        )
+        .order_by(PaymentTransaction.created_at.desc(), PaymentTransaction.id.desc())
+    )
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Refund transaction not found")
+
+    request = Request(
+        f"https://api.razorpay.com/v1/refunds/{quote(refund_id)}",
+        headers={"Authorization": razorpay_auth_header(settings)},
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Razorpay rejected the refund status request ({error.code})",
+        ) from error
+    except (URLError, TimeoutError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not reach Razorpay for refund status. Please retry.",
+        ) from error
+
+    transaction.status = data.get("status", transaction.status)
+    transaction.amount_paise = int(data.get("amount") or transaction.amount_paise)
+    transaction.currency = data.get("currency") or transaction.currency
+    transaction.raw_payload = data
+
+    order = transaction.order
+    payment_status = None
+    if order is not None:
+        order.payment_status = (
+            PaymentStatus.REFUNDED
+            if refunded_amount_paise(order.id, db) >= order.total_paise
+            else PaymentStatus.PAID
+        )
+        payment_status = enum_value(order.payment_status)
+
+    db.commit()
+    return {
+        "provider": "razorpay",
+        "order_id": transaction.order_id,
+        "refund_id": refund_id,
+        "payment_id": data.get("payment_id") or transaction.provider_payment_id,
+        "amount": paise_to_rupees(transaction.amount_paise),
+        "currency": transaction.currency,
+        "status": transaction.status,
+        "payment_status": payment_status,
     }
 
 
@@ -404,6 +527,13 @@ async def receive_razorpay_webhook(
         raw_payload=payload,
     )
     if order is not None:
+        if event_type.startswith("refund."):
+            order.payment_status = (
+                PaymentStatus.REFUNDED
+                if refunded_amount_paise(order.id, db) >= order.total_paise
+                else PaymentStatus.PAID
+            )
+            payment_status = enum_value(order.payment_status)
         notify_order_customer(
             db,
             order,

@@ -418,6 +418,22 @@ button:disabled {
   color: #706851;
 }
 
+.payment-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.payment-history span {
+  padding: 7px 10px;
+  border: 1px solid #dcebdc;
+  border-radius: 999px;
+  color: #315433;
+  background: #f6fff5;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .fulfillment-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);

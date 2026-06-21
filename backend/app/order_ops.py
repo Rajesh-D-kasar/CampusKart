@@ -1,7 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import DeliveryLocation, Inventory, Order, OrderItem, OrderStatus, PaymentStatus
+from app.models import (
+    DeliveryLocation,
+    Inventory,
+    Order,
+    OrderItem,
+    OrderStatus,
+    PaymentStatus,
+    PaymentTransaction,
+)
 
 
 def enum_value(value) -> str:
@@ -88,6 +96,41 @@ def serialize_delivery_location(location: DeliveryLocation | None) -> dict | Non
         "battery_percent": location.battery_percent,
         "source": location.source,
         "created_at": location.created_at,
+    }
+
+
+def refund_totals_by_refund_id(transactions: list[PaymentTransaction]) -> dict[str, int]:
+    latest_amounts: dict[str, tuple[int, int]] = {}
+    for transaction in transactions:
+        if not transaction.provider_refund_id:
+            continue
+        transaction_id = transaction.id or 0
+        current = latest_amounts.get(transaction.provider_refund_id)
+        if current is None or transaction_id >= current[0]:
+            latest_amounts[transaction.provider_refund_id] = (
+                transaction_id,
+                transaction.amount_paise,
+            )
+    return {
+        refund_id: amount
+        for refund_id, (_transaction_id, amount) in latest_amounts.items()
+    }
+
+
+def serialize_payment_transaction(transaction: PaymentTransaction) -> dict:
+    return {
+        "id": transaction.id,
+        "order_id": transaction.order_id,
+        "provider": transaction.provider,
+        "provider_order_id": transaction.provider_order_id,
+        "provider_payment_id": transaction.provider_payment_id,
+        "provider_refund_id": transaction.provider_refund_id,
+        "event_type": transaction.event_type,
+        "status": transaction.status,
+        "amount": transaction.amount_paise / 100,
+        "currency": transaction.currency,
+        "verified": transaction.verified,
+        "created_at": transaction.created_at,
     }
 
 

@@ -197,6 +197,9 @@ def test_admin_can_execute_razorpay_refund(client, db_session, monkeypatch) -> N
     app.dependency_overrides[get_settings] = lambda: configured_settings(secret)
 
     class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
         def __enter__(self):
             return self
 
@@ -204,20 +207,32 @@ def test_admin_can_execute_razorpay_refund(client, db_session, monkeypatch) -> N
             return False
 
         def read(self):
-            return json.dumps(
-                {
-                    "id": "rfnd_test_789",
-                    "payment_id": "pay_refund_456",
-                    "amount": 12500,
-                    "currency": "INR",
-                    "status": "processed",
-                }
-            ).encode("utf-8")
+            return json.dumps(self.payload).encode("utf-8")
 
     def fake_urlopen(request, timeout):
         assert timeout == 10
-        assert request.full_url.endswith("/v1/payments/pay_refund_456/refund")
-        return FakeResponse()
+        if request.full_url.endswith("/v1/payments/pay_refund_456/refund"):
+            request_body = json.loads(request.data.decode("utf-8"))
+            return FakeResponse(
+                {
+                    "id": "rfnd_test_789",
+                    "payment_id": "pay_refund_456",
+                    "amount": request_body["amount"],
+                    "currency": "INR",
+                    "status": "processed",
+                }
+            )
+        if request.full_url.endswith("/v1/refunds/rfnd_test_789"):
+            return FakeResponse(
+                {
+                    "id": "rfnd_test_789",
+                    "payment_id": "pay_refund_456",
+                    "amount": order.json()["total"] * 100,
+                    "currency": "INR",
+                    "status": "processed",
+                }
+            )
+        raise AssertionError(f"Unexpected Razorpay URL: {request.full_url}")
 
     monkeypatch.setattr("app.routes.payments.urlopen", fake_urlopen)
 
@@ -252,21 +267,52 @@ def test_admin_can_execute_razorpay_refund(client, db_session, monkeypatch) -> N
         admin = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
         refund = client.post(
             "/payments/razorpay/refunds",
-            json={"order_id": order.json()["id"], "amount": 125, "reason": "Test refund"},
+            json={"order_id": order.json()["id"], "reason": "Test refund"},
             headers=admin,
         )
+        refund_status = client.get(
+            f"/payments/razorpay/refunds/{refund.json()['refund_id']}",
+            headers=admin,
+        )
+        transactions_response = client.get("/payments/transactions", headers=admin)
+        transactions = db_session.scalars(
+            select(PaymentTransaction).where(
+                PaymentTransaction.order_id == order.json()["id"]
+            )
+        ).all()
+        db_session.add(
+            PaymentTransaction(
+                order_id=order.json()["id"],
+                provider="razorpay",
+                provider_order_id="order_refund_123",
+                provider_payment_id="pay_refund_456",
+                provider_refund_id="rfnd_test_789",
+                event_type="refund.processed",
+                status="processed",
+                amount_paise=round(order.json()["total"] * 100),
+                currency="INR",
+                verified=True,
+                raw_payload={},
+            )
+        )
+        db_session.commit()
+        settlements_response = client.get("/admin/settlements", headers=admin)
     finally:
         app.dependency_overrides.pop(get_settings, None)
 
-    transactions = db_session.scalars(
-        select(PaymentTransaction).where(
-            PaymentTransaction.order_id == order.json()["id"]
-        )
-    ).all()
     assert refund.status_code == 200
     assert refund.json()["refund_id"] == "rfnd_test_789"
     assert refund.json()["payment_status"] == "refunded"
+    assert refund_status.status_code == 200
+    assert refund_status.json()["status"] == "processed"
+    assert transactions_response.status_code == 200
+    assert any(
+        transaction["provider_refund_id"] == "rfnd_test_789"
+        for transaction in transactions_response.json()
+    )
     assert {transaction.event_type for transaction in transactions} == {
         "order_paid",
         "refund_requested",
     }
+    assert settlements_response.status_code == 200
+    assert settlements_response.json()["refunded_total"] == refund_status.json()["amount"]

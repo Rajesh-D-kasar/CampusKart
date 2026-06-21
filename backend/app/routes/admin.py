@@ -13,6 +13,7 @@ from app.models import (
     Order,
     OrderStatus,
     PaymentStatus,
+    PaymentTransaction,
     Product,
     Store,
     User,
@@ -23,8 +24,10 @@ from app.order_ops import (
     cancel_order,
     finalize_reserved_inventory,
     latest_delivery_location,
+    refund_totals_by_refund_id,
     serialize_delivery_location,
     serialize_order_item,
+    serialize_payment_transaction,
 )
 from app.delivery_assignment import (
     delivery_partners,
@@ -46,6 +49,7 @@ from app.schemas import (
     AdminProductCreate,
     AdminProductOut,
     AdminProductUpdate,
+    AdminSettlementReportOut,
     AdminSummaryOut,
 )
 from app.order_handoff import (
@@ -99,6 +103,7 @@ def order_options():
         selectinload(Order.user),
         selectinload(Order.assigned_delivery_partner),
         selectinload(Order.delivery_locations),
+        selectinload(Order.payment_transactions),
     )
 
 
@@ -172,6 +177,14 @@ def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict
         "pickup_otp": shop_pickup_otp(order, db, settings),
         **handoff_state(order, db),
         "lifecycle_events": lifecycle_events(order, db),
+        "payment_transactions": [
+            serialize_payment_transaction(transaction)
+            for transaction in sorted(
+                order.payment_transactions,
+                key=lambda item: item.created_at,
+                reverse=True,
+            )
+        ],
     }
 
 
@@ -331,6 +344,54 @@ def read_admin_analytics(
                 reverse=True,
             )[:5]
         ],
+    }
+
+
+@router.get("/settlements", response_model=AdminSettlementReportOut)
+def read_admin_settlements(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    orders = list(db.scalars(select(Order)).all())
+    transactions = list(db.scalars(select(PaymentTransaction)).all())
+    refund_transactions = [
+        transaction
+        for transaction in transactions
+        if transaction.provider_refund_id
+    ]
+    paid_orders = [
+        order
+        for order in orders
+        if order.payment_status in {PaymentStatus.PAID, PaymentStatus.REFUNDED}
+    ]
+    razorpay_paid = sum(
+        order.total_paise
+        for order in paid_orders
+        if order.payment_method == "razorpay"
+    )
+    cod_collected = sum(
+        order.total_paise
+        for order in paid_orders
+        if order.payment_method == "cash_on_delivery"
+    )
+    cod_pending = sum(
+        order.total_paise
+        for order in orders
+        if order.payment_method == "cash_on_delivery"
+        and order.payment_status == PaymentStatus.PENDING
+        and order.status != OrderStatus.CANCELLED
+    )
+    refunded_total = sum(refund_totals_by_refund_id(refund_transactions).values())
+    paid_revenue = sum(order.total_paise for order in paid_orders)
+    return {
+        "paid_revenue": paise_to_rupees(paid_revenue),
+        "razorpay_paid": paise_to_rupees(razorpay_paid),
+        "cod_collected": paise_to_rupees(cod_collected),
+        "cod_pending": paise_to_rupees(cod_pending),
+        "refunded_total": paise_to_rupees(refunded_total),
+        "net_settlement": paise_to_rupees(max(0, paid_revenue - refunded_total)),
+        "transaction_count": len(transactions),
+        "refund_count": len(refund_transactions),
     }
 
 
