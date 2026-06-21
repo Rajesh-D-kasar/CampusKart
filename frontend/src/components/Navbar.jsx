@@ -30,6 +30,9 @@ function Navbar() {
               <NavLink className={navClassName} to="/orders">
                 Orders
               </NavLink>
+              <NavLink className={navClassName} to="/support">
+                Support
+              </NavLink>
               {user.role === "admin" && (
                 <a href={shopOwnerPanelUrl}>Shop Panel</a>
               )}
@@ -50,6 +53,9 @@ function Navbar() {
               </NavLink>
               <NavLink className={navClassName} to="/register">
                 Register
+              </NavLink>
+              <NavLink className={navClassName} to="/support">
+                Support
               </NavLink>
             </>
           )}

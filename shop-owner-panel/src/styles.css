@@ -32,7 +32,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -189,6 +190,10 @@ button:disabled {
 .search-box input,
 .form-grid input,
 .form-grid select,
+.support-form input,
+.support-form select,
+.support-form textarea,
+.partner-select select,
 .catalog-grid input,
 .inventory-row input {
   width: 100%;
@@ -205,10 +210,20 @@ button:disabled {
 .search-box input:focus,
 .form-grid input:focus,
 .form-grid select:focus,
+.support-form input:focus,
+.support-form select:focus,
+.support-form textarea:focus,
+.partner-select select:focus,
 .catalog-grid input:focus,
 .inventory-row input:focus {
   border-color: #1f8f3a;
   box-shadow: 0 0 0 4px rgb(31 143 58 / 12%);
+}
+
+.support-form textarea {
+  min-height: 96px;
+  padding-top: 12px;
+  resize: vertical;
 }
 
 .primary-button,
@@ -381,6 +396,14 @@ button:disabled {
     linear-gradient(180deg, rgb(255 255 255 / 82%), rgb(255 250 240 / 82%));
 }
 
+.partner-select {
+  display: grid;
+  gap: 7px;
+  color: #4f4b3f;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .handoff-card {
   border-color: rgb(255 184 77 / 32%);
 }
@@ -520,6 +543,64 @@ button:disabled {
   box-shadow: 0 10px 28px rgb(75 64 28 / 5%);
 }
 
+.support-panel {
+  gap: 16px;
+}
+
+.support-form {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.support-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f4b3f;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.support-wide {
+  grid-column: 1 / -1;
+}
+
+.support-list {
+  display: grid;
+  gap: 10px;
+}
+
+.support-ticket {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #eee8d9;
+  border-radius: 16px;
+  background: #fffdf8;
+}
+
+.support-ticket strong,
+.support-ticket p,
+.support-ticket small {
+  display: block;
+}
+
+.support-ticket p,
+.support-ticket small {
+  margin: 5px 0 0;
+  color: #706851;
+  line-height: 1.5;
+}
+
+.ticket-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .item-name {
   display: grid;
   gap: 5px;
@@ -637,6 +718,7 @@ button:disabled {
 
   .stats-grid,
   .inventory-row,
+  .support-form,
   .form-grid {
     grid-template-columns: 1fr;
   }

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from app.delivery_assignment import assigned_partner_email, delivery_partner
 from app.models import Order, OrderStatus
 
 TRACKING_FLOW = [
@@ -43,35 +44,6 @@ ETA_MINUTES_BY_STATUS = {
     OrderStatus.DELIVERED.value: 0,
 }
 
-DELIVERY_PARTNERS = [
-    {
-        "name": "Aman Delivery",
-        "email": "delivery1@campuskart.com",
-        "phone": "+91 90000 11101",
-        "vehicle_number": "MH 12 CK 2041",
-    },
-    {
-        "name": "Rohit Runner",
-        "email": "delivery2@campuskart.com",
-        "phone": "+91 90000 11102",
-        "vehicle_number": "MH 12 CK 3198",
-    },
-    {
-        "name": "Priya Express",
-        "email": "delivery3@campuskart.com",
-        "phone": "+91 90000 11103",
-        "vehicle_number": "MH 12 CK 4427",
-    },
-]
-
-PARTNER_STATUSES = {
-    OrderStatus.CONFIRMED.value,
-    OrderStatus.PACKING.value,
-    OrderStatus.OUT_FOR_DELIVERY.value,
-    OrderStatus.DELIVERED.value,
-}
-
-
 def enum_value(value) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
@@ -94,17 +66,6 @@ def estimate_delivery_at(order: Order) -> datetime | None:
 
 def eta_minutes(order: Order) -> int | None:
     return ETA_MINUTES_BY_STATUS.get(order_status(order))
-
-
-def delivery_partner(order: Order) -> dict[str, str] | None:
-    if order_status(order) not in PARTNER_STATUSES or order.id is None:
-        return None
-    return DELIVERY_PARTNERS[order.id % len(DELIVERY_PARTNERS)]
-
-
-def assigned_partner_email(order: Order) -> str | None:
-    partner = delivery_partner(order)
-    return partner["email"] if partner else None
 
 
 def tracking_message(order: Order) -> str:

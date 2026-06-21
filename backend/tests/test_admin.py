@@ -219,3 +219,59 @@ def test_admin_can_update_order_status(client, db_session: Session) -> None:
     assert orders.json()[0]["delivery_partner"]["phone"].startswith("+91")
     assert db_order is not None
     assert db_order.payment_status == PaymentStatus.PAID
+
+
+def test_admin_can_assign_delivery_partner(client, db_session: Session) -> None:
+    order_id = place_customer_order(client, db_session)
+    headers = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+    partners = client.get("/admin/delivery-partners", headers=headers)
+    assert partners.status_code == 200
+    partner = partners.json()[0]
+
+    confirmed = client.patch(
+        f"/admin/orders/{order_id}/status",
+        json={"status": "confirmed"},
+        headers=headers,
+    )
+    assigned = client.patch(
+        f"/admin/orders/{order_id}/assignment",
+        json={"delivery_partner_id": partner["id"]},
+        headers=headers,
+    )
+
+    assert confirmed.status_code == 200
+    assert confirmed.json()["delivery_partner"] is not None
+    assert assigned.status_code == 200
+    assert assigned.json()["delivery_partner"]["name"] == partner["name"]
+
+
+def test_support_ticket_flow_for_customer_and_admin(client) -> None:
+    customer = customer_headers(client, email="support-customer@example.com")
+    admin = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+
+    created = client.post(
+        "/support/tickets",
+        json={
+            "audience": "customer",
+            "category": "delivery",
+            "subject": "Delivery OTP issue",
+            "message": "Customer did not receive the delivery OTP clearly.",
+        },
+        headers=customer,
+    )
+    mine = client.get("/support/tickets", headers=customer)
+    all_tickets = client.get("/admin/support/tickets", headers=admin)
+    updated = client.patch(
+        f"/admin/support/tickets/{created.json()['id']}",
+        json={"status": "resolved", "priority": "high", "resolution": "Customer contacted."},
+        headers=admin,
+    )
+
+    assert created.status_code == 201
+    assert created.json()["status"] == "open"
+    assert mine.status_code == 200
+    assert mine.json()[0]["subject"] == "Delivery OTP issue"
+    assert all_tickets.status_code == 200
+    assert any(ticket["id"] == created.json()["id"] for ticket in all_tickets.json())
+    assert updated.json()["status"] == "resolved"
+    assert updated.json()["priority"] == "high"

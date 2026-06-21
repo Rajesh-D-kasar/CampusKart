@@ -66,6 +66,8 @@ def get_handoff(
 def handoff_state(order: Order, db: Session) -> dict:
     handoff = get_handoff(order, db)
     return {
+        "store_ready": bool(handoff and handoff.store_ready_at),
+        "store_ready_at": handoff.store_ready_at if handoff else None,
         "pickup_verified": bool(handoff and handoff.pickup_verified_at),
         "dropoff_verified": bool(handoff and handoff.dropoff_verified_at),
         "pickup_verified_at": handoff.pickup_verified_at if handoff else None,
@@ -73,8 +75,18 @@ def handoff_state(order: Order, db: Session) -> dict:
     }
 
 
+def mark_store_ready(order: Order, db: Session) -> OrderHandoffVerification:
+    handoff = get_handoff(order, db, create=True)
+    assert handoff is not None
+    if handoff.store_ready_at is None:
+        handoff.store_ready_at = now_utc()
+    return handoff
+
+
 def shop_pickup_otp(order: Order, db: Session, settings: Settings) -> str | None:
     state = handoff_state(order, db)
+    if not state["store_ready"]:
+        return None
     if state["pickup_verified"]:
         return None
     if enum_value(order.status) not in OTP_READY_STATUSES:
@@ -109,6 +121,11 @@ def verify_handoff_otp(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Pickup OTP must be verified before customer delivery",
+        )
+    if purpose == PICKUP_PURPOSE and handoff.store_ready_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Store must mark the order ready before pickup",
         )
 
     attempts_field = (

@@ -109,6 +109,38 @@
           </aside>
         </section>
 
+        <section class="panel-card support-panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Madad center</span>
+              <h2>Seller support</h2>
+              <p>Order, stock, delivery ya technical issue ko yahin track karo.</p>
+            </div>
+          </div>
+          <form class="support-form" id="support-form">
+            <label>
+              Type
+              <select id="support-category">
+                <option value="inventory">Inventory</option>
+                <option value="delivery">Delivery</option>
+                <option value="order">Order</option>
+                <option value="technical">Technical</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>
+              Subject
+              <input id="support-subject" placeholder="Example: Rider assignment issue" required />
+            </label>
+            <label class="support-wide">
+              Message
+              <textarea id="support-message" placeholder="Problem detail me likho..." required></textarea>
+            </label>
+            <button class="primary-button" type="submit">Create support ticket</button>
+          </form>
+          <div class="support-list" id="support-list"></div>
+        </section>
+
         <section class="panel-card inventory-panel">
           <div class="section-head">
             <div>

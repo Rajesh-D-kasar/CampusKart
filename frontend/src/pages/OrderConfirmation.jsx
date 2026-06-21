@@ -223,6 +223,12 @@ function OrderConfirmation() {
           <Link className="button button-secondary checkout-button" to="/orders">
             View all orders
           </Link>
+          <Link
+            className="button button-secondary checkout-button"
+            to={`/support?orderId=${order.id}`}
+          >
+            Need help?
+          </Link>
         </aside>
       </div>
 

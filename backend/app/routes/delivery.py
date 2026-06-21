@@ -41,7 +41,11 @@ def enum_value(value) -> str:
 
 
 def order_options():
-    return selectinload(Order.items), selectinload(Order.user)
+    return (
+        selectinload(Order.items),
+        selectinload(Order.user),
+        selectinload(Order.assigned_delivery_partner),
+    )
 
 
 def can_access_order(order: Order, current_user: User) -> bool:

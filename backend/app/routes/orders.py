@@ -105,13 +105,13 @@ def serialize_order(order: Order, db: Session, settings: Settings) -> dict:
 
 
 def order_options():
-    return selectinload(Order.items)
+    return selectinload(Order.items), selectinload(Order.assigned_delivery_partner)
 
 
 def get_owned_order(order_id: int, user_id: int, db: Session) -> Order:
     order = db.scalar(
         select(Order)
-        .options(order_options())
+        .options(*order_options())
         .where(Order.id == order_id, Order.user_id == user_id)
     )
     if order is None:
@@ -252,7 +252,7 @@ def list_orders(
 ) -> list[dict]:
     orders = db.scalars(
         select(Order)
-        .options(order_options())
+        .options(*order_options())
         .where(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
     ).all()

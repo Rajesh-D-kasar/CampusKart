@@ -21,6 +21,8 @@ run locally, but structured like a real commerce system.
 - JWT authentication with password hashing
 - Customer OTP login with expiry, resend cooldown, attempt limits, and optional SMTP delivery
 - Secure order handoff OTPs: shop pickup OTP plus separate customer delivery OTP
+- Real delivery partner assignment with shop-owner reassignment controls
+- Customer, delivery partner, and seller support tickets
 - Guest cart in browser storage and authenticated cart sync after login
 - Address CRUD for checkout
 - Cash-on-delivery plus mock UPI/card payment flows
@@ -29,9 +31,10 @@ run locally, but structured like a real commerce system.
 - My Orders page with ETA, delivery partner, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
   inventory controls
-- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, and doorstep handoff
+- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, doorstep handoff, and partner support
 - Separate delivery partner website at `delivery-panel/`
-- Separate shop owner website at `shop-owner-panel/`
+- Separate shop owner website at `shop-owner-panel/` with rider assignment,
+  ready-for-pickup, and support desk controls
 - Security headers, trusted-host validation, Dockerfiles, and deployment config
 - One-click Windows run script for local development
 - Backend and frontend test coverage
@@ -161,7 +164,9 @@ It includes:
 - COD collection reminders
 - status buttons for out-for-delivery and delivered
 - shop pickup OTP is required before starting the route
+- shop owner must mark the order packed/ready before pickup OTP is shown
 - customer delivery OTP is required before marking the order delivered
+- delivery partner support form for route, COD, customer, and app issues
 
 For deployment, set `delivery-panel/.env` or hosting env var:
 
@@ -187,7 +192,10 @@ It includes:
 - order queue with open/new/packing/done/all tabs
 - pack list for every order
 - assigned delivery partner details
+- delivery partner dropdown for assigning or reassigning riders before pickup
+- packed/ready button to release the pickup OTP
 - pickup OTP card for safe handoff to the delivery boy
+- seller support form plus support ticket desk
 - quick order status buttons
 - low-stock warning list
 - stock quantity and reorder alert updates
@@ -213,8 +221,9 @@ VITE_API_URL=https://your-api-domain.example
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` |
 | Delivery | `GET /delivery/orders`, `PATCH /delivery/orders/{id}/status` |
+| Support | `POST /support/tickets`, `GET /support/tickets`, `GET/PATCH /admin/support/tickets` |
 | Payments | `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify` |
-| Admin | `GET /admin/summary`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+| Admin | `GET /admin/summary`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 ## Development Accounts
 
@@ -325,7 +334,7 @@ npm run build
 Expected current result:
 
 ```text
-Backend tests: 45 passed
+Backend tests: 47 passed
 Frontend tests: 4 passed
 Frontend build: passed
 Delivery panel build: passed

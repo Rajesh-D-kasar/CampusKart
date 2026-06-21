@@ -460,6 +460,7 @@ main {
 .search-bar input,
 .auth-card input,
 .checkout-card input,
+.checkout-card select,
 .checkout-card textarea,
 .order-summary textarea,
 .sort-control select,
@@ -489,6 +490,7 @@ main {
 .search-bar input:focus,
 .auth-card input:focus,
 .checkout-card input:focus,
+.checkout-card select:focus,
 .checkout-card textarea:focus,
 .order-summary textarea:focus,
 .sort-control select:focus,
@@ -1078,9 +1080,14 @@ button.category-card {
 }
 
 .address-form-grid input,
+.checkout-card select,
 .checkout-card textarea,
 .order-summary textarea {
   padding: 0 13px;
+}
+
+.checkout-card select {
+  min-height: 46px;
 }
 
 .checkout-card textarea,
@@ -1088,6 +1095,77 @@ button.category-card {
   min-height: 92px;
   padding-top: 12px;
   resize: vertical;
+}
+
+.support-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.support-form-card {
+  display: grid;
+  gap: 14px;
+}
+
+.support-form-card label {
+  display: grid;
+  gap: 7px;
+  color: #465147;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.support-ticket-list {
+  display: grid;
+  gap: 12px;
+}
+
+.support-ticket-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #edf1e9;
+  border-radius: 16px;
+  background: #fbfdf9;
+}
+
+.support-ticket-row strong,
+.support-ticket-row p,
+.support-ticket-row small {
+  display: block;
+}
+
+.support-ticket-row p,
+.support-ticket-row small {
+  margin: 6px 0 0;
+  color: #657066;
+  line-height: 1.5;
+}
+
+.status-chip {
+  min-width: max-content;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: #17612d;
+  background: #e8f8df;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.status-open {
+  color: #8a5200;
+  background: #fff5d8;
+}
+
+.status-closed,
+.status-resolved {
+  color: #17612d;
+  background: #e8f8df;
 }
 
 .checkbox-label {
@@ -1905,6 +1983,10 @@ button.category-card {
   }
 
   .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .support-layout {
     grid-template-columns: 1fr;
   }
 

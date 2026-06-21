@@ -70,9 +70,12 @@ def place_confirmed_order(
 
 def pickup_otp_for_order(client, order_id: int) -> str:
     admin = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+    ready = client.patch(f"/admin/orders/{order_id}/ready", headers=admin)
+    assert ready.status_code == 200
     orders = client.get("/admin/orders", headers=admin)
     assert orders.status_code == 200
     order = next(item for item in orders.json() if item["id"] == order_id)
+    assert order["store_ready"] is True
     assert order["pickup_otp"]
     assert order["items"]
     assert order["delivery_partner"] is not None

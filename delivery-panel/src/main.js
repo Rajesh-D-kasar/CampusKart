@@ -12,6 +12,7 @@ const state = {
   user: loadStoredUser(),
   orders: [],
   summary: null,
+  supportTickets: [],
   tab: "active",
   query: "",
   savingOrderId: null,
@@ -33,6 +34,11 @@ const elements = {
   searchInput: document.querySelector("#search-input"),
   panelError: document.querySelector("#panel-error"),
   ordersGrid: document.querySelector("#orders-grid"),
+  supportForm: document.querySelector("#support-form"),
+  supportCategory: document.querySelector("#support-category"),
+  supportSubject: document.querySelector("#support-subject"),
+  supportMessage: document.querySelector("#support-message"),
+  supportList: document.querySelector("#support-list"),
   refreshButton: document.querySelector("#refresh-button"),
   logoutButton: document.querySelector("#logout-button"),
 };
@@ -98,6 +104,15 @@ function mapHref(address) {
 
 function nextAction(order) {
   if (order.status === "confirmed" || order.status === "packing") {
+    if (!order.store_ready) {
+      return {
+        label: "Waiting for shop ready",
+        status: "",
+        otpLabel: "Pickup not ready",
+        otpHelp: "Shop owner packed / ready mark karega tab pickup OTP milega.",
+        disabled: true,
+      };
+    }
     return {
       label: "Verify shop OTP & start route",
       status: "out_for_delivery",
@@ -175,12 +190,14 @@ async function loadDashboard() {
   elements.refreshButton.disabled = true;
 
   try {
-    const [summary, orders] = await Promise.all([
+    const [summary, orders, supportTickets] = await Promise.all([
       apiFetch("/delivery/summary"),
       apiFetch("/delivery/orders"),
+      apiFetch("/support/tickets"),
     ]);
     state.summary = summary;
     state.orders = orders;
+    state.supportTickets = supportTickets;
     elements.lastRefresh.textContent = `Last synced ${formatDateTime(
       new Date().toISOString()
     )}`;
@@ -190,6 +207,21 @@ async function loadDashboard() {
   } finally {
     elements.refreshButton.disabled = false;
   }
+}
+
+async function createSupportTicket() {
+  const ticket = await apiFetch("/support/tickets", {
+    method: "POST",
+    body: JSON.stringify({
+      audience: "delivery",
+      category: elements.supportCategory.value,
+      subject: elements.supportSubject.value.trim(),
+      message: elements.supportMessage.value.trim(),
+    }),
+  });
+  state.supportTickets = [ticket, ...state.supportTickets];
+  elements.supportForm.reset();
+  renderSupportTickets();
 }
 
 async function updateOrderStatus(orderId, status, otp) {
@@ -323,6 +355,29 @@ function renderOrders() {
   elements.ordersGrid.innerHTML = orders.map(renderOrderCard).join("");
 }
 
+function renderSupportTickets() {
+  if (!elements.supportList) return;
+  if (state.supportTickets.length === 0) {
+    elements.supportList.innerHTML = `<div class="quiet-card">No support tickets yet.</div>`;
+    return;
+  }
+  elements.supportList.innerHTML = state.supportTickets
+    .slice(0, 5)
+    .map(
+      (ticket) => `
+        <article class="support-ticket">
+          <div>
+            <span>#${ticket.id} - ${escapeHtml(ticket.category)}</span>
+            <strong>${escapeHtml(ticket.subject)}</strong>
+            <p>${escapeHtml(ticket.message)}</p>
+          </div>
+          <span class="status-pill status-${escapeHtml(ticket.status)}">${escapeHtml(formatStatus(ticket.status))}</span>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderOrderCard(order) {
   const address = order.delivery_address_snapshot || {};
   const action = nextAction(order);
@@ -424,7 +479,7 @@ function renderOrderCard(order) {
           <span class="${order.dropoff_verified ? "done" : ""}">Drop ${order.dropoff_verified ? "verified" : "pending"}</span>
         </div>
         ${
-          action
+          action && !action.disabled
             ? `<label class="otp-input-card">
                 <span>Enter 6 digit OTP</span>
                 <input
@@ -441,11 +496,13 @@ function renderOrderCard(order) {
 
       <div class="order-actions">
         ${
-          action
+          action?.status
             ? `<button class="primary-button" data-status-order="${order.id}" data-next-status="${action.status}" ${saving ? "disabled" : ""}>
                 ${saving ? "Saving..." : action.label}
               </button>`
-            : `<span class="done-pill">Delivery completed</span>`
+            : action?.disabled
+              ? `<button class="ghost-button" disabled>${action.label}</button>`
+              : `<span class="done-pill">Delivery completed</span>`
         }
       </div>
     </article>
@@ -457,6 +514,7 @@ function renderDashboard() {
   renderStats();
   renderTabs();
   renderOrders();
+  renderSupportTickets();
 }
 
 elements.loginForm.addEventListener("submit", async (event) => {
@@ -491,6 +549,16 @@ elements.tabs.addEventListener("click", (event) => {
 elements.searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderOrders();
+});
+
+elements.supportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setError(elements.panelError, "");
+  try {
+    await createSupportTicket();
+  } catch (error) {
+    setError(elements.panelError, error.message);
+  }
 });
 
 elements.ordersGrid.addEventListener("click", async (event) => {

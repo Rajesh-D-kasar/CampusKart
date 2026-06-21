@@ -14,6 +14,7 @@ from app.routes.offers import router as offers_router
 from app.routes.orders import router as orders_router
 from app.routes.payments import router as payments_router
 from app.routes.products import router as products_router
+from app.routes.support import router as support_router
 from app.routes.users import router as users_router
 
 settings = get_settings()
@@ -60,6 +61,7 @@ app.include_router(addresses_router)
 app.include_router(orders_router)
 app.include_router(payments_router)
 app.include_router(admin_router)
+app.include_router(support_router)
 
 
 @app.get("/")

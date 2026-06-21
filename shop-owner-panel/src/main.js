@@ -12,6 +12,8 @@ const state = {
   user: loadStoredUser(),
   summary: null,
   orders: [],
+  deliveryPartners: [],
+  supportTickets: [],
   inventory: [],
   categories: [],
   orderTab: "open",
@@ -34,6 +36,11 @@ const el = {
   orderTabs: document.querySelector("#order-tabs"),
   orderSearch: document.querySelector("#order-search"),
   ordersList: document.querySelector("#orders-list"),
+  supportForm: document.querySelector("#support-form"),
+  supportCategory: document.querySelector("#support-category"),
+  supportSubject: document.querySelector("#support-subject"),
+  supportMessage: document.querySelector("#support-message"),
+  supportList: document.querySelector("#support-list"),
   lowStockList: document.querySelector("#low-stock-list"),
   inventorySearch: document.querySelector("#inventory-search"),
   inventoryList: document.querySelector("#inventory-list"),
@@ -165,14 +172,19 @@ async function loadDashboard() {
   setError(el.panelError, "");
 
   try {
-    const [summary, orders, inventory, categories] = await Promise.all([
+    const [summary, orders, deliveryPartners, supportTickets, inventory, categories] =
+      await Promise.all([
       apiFetch("/admin/summary"),
       apiFetch("/admin/orders"),
+      apiFetch("/admin/delivery-partners"),
+      apiFetch("/admin/support/tickets"),
       apiFetch("/admin/inventory"),
       apiFetch("/admin/categories"),
     ]);
     state.summary = summary;
     state.orders = orders;
+    state.deliveryPartners = deliveryPartners;
+    state.supportTickets = supportTickets;
     state.inventory = inventory;
     state.categories = categories;
     renderDashboard();
@@ -209,6 +221,68 @@ async function updateOrderStatus(orderId, status) {
     state.saving = "";
     renderOrders();
   }
+}
+
+async function updateOrderAssignment(orderId, deliveryPartnerId) {
+  state.saving = `assign-${orderId}`;
+  renderOrders();
+  try {
+    const order = await apiFetch(`/admin/orders/${orderId}/assignment`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        delivery_partner_id: deliveryPartnerId ? Number(deliveryPartnerId) : null,
+      }),
+    });
+    state.orders = state.orders.map((item) => (item.id === orderId ? order : item));
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderOrders();
+  }
+}
+
+async function markOrderReady(orderId) {
+  state.saving = `ready-${orderId}`;
+  renderOrders();
+  try {
+    const order = await apiFetch(`/admin/orders/${orderId}/ready`, {
+      method: "PATCH",
+    });
+    state.orders = state.orders.map((item) => (item.id === orderId ? order : item));
+    await loadDashboard();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  } finally {
+    state.saving = "";
+    renderOrders();
+  }
+}
+
+async function createSupportTicket() {
+  const ticket = await apiFetch("/support/tickets", {
+    method: "POST",
+    body: JSON.stringify({
+      audience: "seller",
+      category: el.supportCategory.value,
+      subject: el.supportSubject.value.trim(),
+      message: el.supportMessage.value.trim(),
+    }),
+  });
+  state.supportTickets = [ticket, ...state.supportTickets];
+  el.supportForm.reset();
+  renderSupportTickets();
+}
+
+async function updateSupportTicket(ticketId, status) {
+  const ticket = await apiFetch(`/admin/support/tickets/${ticketId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+  state.supportTickets = state.supportTickets.map((item) =>
+    item.id === ticketId ? ticket : item
+  );
+  renderSupportTickets();
 }
 
 async function updateStock(productId, stockQuantity, reorderLevel, isActive = true) {
@@ -354,6 +428,19 @@ function renderOrderCard(order) {
   const address = order.delivery_address_snapshot || {};
   const partner = order.delivery_partner;
   const items = order.items || [];
+  const partnerOptions = state.deliveryPartners
+    .map((deliveryPartner) => {
+      const selected = partner?.name === deliveryPartner.name ? "selected" : "";
+      return `<option value="${deliveryPartner.id}" ${selected}>${escapeHtml(
+        deliveryPartner.name
+      )} (${escapeHtml(deliveryPartner.active_order_count)} active)</option>`;
+    })
+    .join("");
+  const canManageAssignment = !["out_for_delivery", "delivered", "cancelled"].includes(
+    order.status
+  );
+  const canMarkReady =
+    ["confirmed", "packing"].includes(order.status) && !order.store_ready;
   return `
     <article class="order-card">
       <div class="order-main">
@@ -392,6 +479,16 @@ function renderOrderCard(order) {
 
         <section class="handoff-card">
           <span class="eyebrow">Delivery handoff</span>
+          <label class="partner-select">
+            Delivery boy
+            <select
+              data-assign-order="${order.id}"
+              ${canManageAssignment && state.saving !== `assign-${order.id}` ? "" : "disabled"}
+            >
+              <option value="">Choose delivery boy</option>
+              ${partnerOptions}
+            </select>
+          </label>
           ${
             partner
               ? `
@@ -415,7 +512,13 @@ function renderOrderCard(order) {
               `
               : `
                 <div class="handoff-status ${order.pickup_verified ? "verified" : ""}">
-                  ${order.pickup_verified ? "Pickup verified" : "Pickup OTP available after confirmation"}
+                  ${
+                    order.pickup_verified
+                      ? "Pickup verified"
+                      : order.store_ready
+                        ? "Pickup OTP loading"
+                        : "Mark ready to show pickup OTP"
+                  }
                 </div>
               `
           }
@@ -434,6 +537,20 @@ function renderOrderCard(order) {
         }
       </section>
       <div class="action-row">
+        ${
+          canMarkReady
+            ? `
+              <button
+                class="primary-button small-button"
+                data-ready-order="${order.id}"
+                ${state.saving === `ready-${order.id}` ? "disabled" : ""}
+                type="button"
+              >
+                ${state.saving === `ready-${order.id}` ? "Saving..." : "Packed / Ready pickup"}
+              </button>
+            `
+            : ""
+        }
         ${actions
           .map(
             ([label, status]) => `
@@ -452,6 +569,36 @@ function renderOrderCard(order) {
       </div>
     </article>
   `;
+}
+
+function renderSupportTickets() {
+  if (state.supportTickets.length === 0) {
+    el.supportList.innerHTML = `<div class="quiet-card">Abhi koi support ticket nahi hai.</div>`;
+    return;
+  }
+  el.supportList.innerHTML = state.supportTickets
+    .slice(0, 8)
+    .map(
+      (ticket) => `
+        <article class="support-ticket">
+          <div>
+            <span class="item-code">#${ticket.id} - ${escapeHtml(ticket.category)}</span>
+            <strong>${escapeHtml(ticket.subject)}</strong>
+            <p>${escapeHtml(ticket.message)}</p>
+            ${ticket.order_number ? `<small>Order: ${escapeHtml(ticket.order_number)}</small>` : ""}
+          </div>
+          <div class="ticket-actions">
+            <span class="status-pill status-${escapeHtml(ticket.status)}">${escapeHtml(formatStatus(ticket.status))}</span>
+            ${
+              ticket.status !== "resolved"
+                ? `<button class="ghost-button small-button" data-ticket-status="resolved" data-ticket-id="${ticket.id}" type="button">Resolve</button>`
+                : ""
+            }
+          </div>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function filteredInventory() {
@@ -547,6 +694,7 @@ function renderDashboard() {
   renderStats();
   renderOrderTabs();
   renderOrders();
+  renderSupportTickets();
   renderLowStock();
   renderInventory();
   renderCategories();
@@ -584,9 +732,41 @@ el.inventorySearch.addEventListener("input", (event) => {
 });
 
 el.ordersList.addEventListener("click", async (event) => {
+  const readyButton = event.target.closest("[data-ready-order]");
+  if (readyButton) {
+    await markOrderReady(Number(readyButton.dataset.readyOrder));
+    return;
+  }
+
   const button = event.target.closest("[data-order-id]");
   if (!button) return;
   await updateOrderStatus(Number(button.dataset.orderId), button.dataset.orderStatus);
+});
+
+el.ordersList.addEventListener("change", async (event) => {
+  const select = event.target.closest("[data-assign-order]");
+  if (!select) return;
+  await updateOrderAssignment(Number(select.dataset.assignOrder), select.value);
+});
+
+el.supportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setError(el.panelError, "");
+  try {
+    await createSupportTicket();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  }
+});
+
+el.supportList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-ticket-id]");
+  if (!button) return;
+  try {
+    await updateSupportTicket(Number(button.dataset.ticketId), button.dataset.ticketStatus);
+  } catch (error) {
+    setError(el.panelError, error.message);
+  }
 });
 
 el.inventoryList.addEventListener("click", async (event) => {

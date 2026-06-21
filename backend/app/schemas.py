@@ -229,6 +229,12 @@ class DeliveryPartnerOut(BaseModel):
     vehicle_number: str
 
 
+class AdminDeliveryPartnerOut(DeliveryPartnerOut):
+    id: int
+    email: EmailStr
+    active_order_count: int = Field(ge=0)
+
+
 class OrderTrackingStepOut(BaseModel):
     key: str
     label: str
@@ -262,6 +268,8 @@ class OrderOut(OrderSummaryOut):
     delivery_instruction: str | None
     items: list[OrderItemOut]
     customer_delivery_otp: str | None = None
+    store_ready: bool = False
+    store_ready_at: datetime | None = None
     pickup_verified: bool = False
     dropoff_verified: bool = False
     pickup_verified_at: datetime | None = None
@@ -335,6 +343,8 @@ class AdminOrderOut(OrderSummaryOut):
     delivery_instruction: str | None
     items: list[OrderItemOut]
     pickup_otp: str | None = None
+    store_ready: bool = False
+    store_ready_at: datetime | None = None
     pickup_verified: bool = False
     dropoff_verified: bool = False
     pickup_verified_at: datetime | None = None
@@ -350,6 +360,10 @@ class AdminOrderStatusUpdate(BaseModel):
         "delivered",
         "cancelled",
     ]
+
+
+class AdminOrderAssignmentUpdate(BaseModel):
+    delivery_partner_id: int | None = None
 
 
 class AdminInventoryOut(BaseModel):
@@ -449,3 +463,43 @@ class AdminProductUpdate(BaseModel):
     is_active: bool | None = None
     stock_quantity: int | None = Field(default=None, ge=0)
     reorder_level: int | None = Field(default=None, ge=0)
+
+
+class SupportTicketCreate(BaseModel):
+    audience: Literal["customer", "delivery", "seller"] | None = None
+    category: Literal[
+        "order",
+        "payment",
+        "delivery",
+        "account",
+        "inventory",
+        "technical",
+        "other",
+    ] = "other"
+    subject: str = Field(min_length=3, max_length=140)
+    message: str = Field(min_length=10, max_length=1500)
+    order_id: int | None = None
+
+
+class SupportTicketUpdate(BaseModel):
+    status: Literal["open", "in_progress", "resolved", "closed"] | None = None
+    priority: Literal["low", "normal", "high", "urgent"] | None = None
+    resolution: str | None = Field(default=None, max_length=1500)
+
+
+class SupportTicketOut(BaseModel):
+    id: int
+    audience: str
+    category: str
+    subject: str
+    message: str
+    status: str
+    priority: str
+    resolution: str | None
+    order_id: int | None
+    order_number: str | None = None
+    requester_name: str
+    requester_email: EmailStr
+    requester_role: str
+    created_at: datetime
+    updated_at: datetime

@@ -89,7 +89,9 @@ class User(TimestampMixin, Base):
     cart: Mapped[Optional["Cart"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
-    orders: Mapped[list["Order"]] = relationship(back_populates="user")
+    orders: Mapped[list["Order"]] = relationship(
+        back_populates="user", foreign_keys="Order.user_id"
+    )
 
 
 class AuthOtpCode(TimestampMixin, Base):
@@ -326,6 +328,9 @@ class Order(TimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
+    assigned_delivery_partner_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     store_id: Mapped[int] = mapped_column(
         ForeignKey("stores.id", ondelete="RESTRICT"), index=True
     )
@@ -369,7 +374,10 @@ class Order(TimestampMixin, Base):
     total_paise: Mapped[int] = mapped_column(Integer)
     delivery_instruction: Mapped[Optional[str]] = mapped_column(String(300))
 
-    user: Mapped["User"] = relationship(back_populates="orders")
+    user: Mapped["User"] = relationship(back_populates="orders", foreign_keys=[user_id])
+    assigned_delivery_partner: Mapped[Optional["User"]] = relationship(
+        foreign_keys=[assigned_delivery_partner_id]
+    )
     store: Mapped["Store"] = relationship(back_populates="orders")
     address: Mapped["Address"] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(
@@ -393,6 +401,7 @@ class OrderHandoffVerification(TimestampMixin, Base):
     dropoff_verified_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True)
     )
+    store_ready_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     pickup_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     dropoff_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     max_attempts: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
@@ -423,3 +432,31 @@ class OrderItem(TimestampMixin, Base):
 
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped[Optional["Product"]] = relationship(back_populates="order_items")
+
+
+class SupportTicket(TimestampMixin, Base):
+    __tablename__ = "support_tickets"
+    __table_args__ = (
+        Index("ix_support_tickets_requester_created", "requester_id", "created_at"),
+        Index("ix_support_tickets_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    requester_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    order_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("orders.id", ondelete="SET NULL"), index=True
+    )
+    audience: Mapped[str] = mapped_column(String(30), index=True)
+    category: Mapped[str] = mapped_column(String(40), index=True)
+    subject: Mapped[str] = mapped_column(String(140))
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(30), default="open", server_default="open")
+    priority: Mapped[str] = mapped_column(
+        String(30), default="normal", server_default="normal"
+    )
+    resolution: Mapped[Optional[str]] = mapped_column(Text)
+
+    requester: Mapped["User"] = relationship(foreign_keys=[requester_id])
+    order: Mapped[Optional["Order"]] = relationship(foreign_keys=[order_id])

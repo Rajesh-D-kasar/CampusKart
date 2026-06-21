@@ -31,7 +31,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -187,7 +189,10 @@ a {
 }
 
 .login-card input,
-.search-box input {
+.search-box input,
+.support-form input,
+.support-form select,
+.support-form textarea {
   width: 100%;
   min-height: 50px;
   padding: 0 14px;
@@ -199,9 +204,18 @@ a {
 }
 
 .login-card input:focus,
-.search-box input:focus {
+.search-box input:focus,
+.support-form input:focus,
+.support-form select:focus,
+.support-form textarea:focus {
   border-color: #1f8f3a;
   box-shadow: 0 0 0 4px rgb(31 143 58 / 12%);
+}
+
+.support-form textarea {
+  min-height: 92px;
+  padding-top: 12px;
+  resize: vertical;
 }
 
 .primary-button,
@@ -589,6 +603,73 @@ a {
   justify-content: flex-end;
 }
 
+.support-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgb(26 59 29 / 9%);
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.support-card h2,
+.support-card p {
+  margin: 0;
+}
+
+.support-card p {
+  color: #61705f;
+  line-height: 1.6;
+}
+
+.support-form {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.support-form label {
+  display: grid;
+  gap: 7px;
+  color: #4c5b49;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.support-wide {
+  grid-column: 1 / -1;
+}
+
+.support-list {
+  display: grid;
+  gap: 10px;
+}
+
+.support-ticket,
+.quiet-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #edf1e9;
+  border-radius: 16px;
+  background: #fbfdf9;
+}
+
+.support-ticket strong,
+.support-ticket p {
+  display: block;
+}
+
+.support-ticket p {
+  margin: 5px 0 0;
+  color: #657066;
+  line-height: 1.5;
+}
+
 .done-pill {
   color: #1f8f3a;
   background: #ecfae8;
@@ -656,6 +737,7 @@ a {
 
   .stats-grid,
   .info-grid,
+  .support-form,
   .handoff-card {
     grid-template-columns: 1fr;
   }

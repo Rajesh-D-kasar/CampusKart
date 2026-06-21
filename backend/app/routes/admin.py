@@ -16,13 +16,21 @@ from app.models import (
     Product,
     Store,
     User,
+    UserRole,
+)
+from app.delivery_assignment import (
+    delivery_partners,
+    ensure_delivery_assignment,
+    serialize_delivery_partner,
 )
 from app.schemas import (
     AdminCategoryCreate,
     AdminCategoryOut,
     AdminCategoryUpdate,
+    AdminDeliveryPartnerOut,
     AdminInventoryOut,
     AdminInventoryUpdate,
+    AdminOrderAssignmentUpdate,
     AdminOrderOut,
     AdminOrderStatusUpdate,
     AdminProductCreate,
@@ -30,7 +38,7 @@ from app.schemas import (
     AdminProductUpdate,
     AdminSummaryOut,
 )
-from app.order_handoff import handoff_state, shop_pickup_otp
+from app.order_handoff import handoff_state, mark_store_ready, shop_pickup_otp
 from app.tracking import tracking_summary
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -71,7 +79,11 @@ def inventory_options():
 
 
 def order_options():
-    return selectinload(Order.items), selectinload(Order.user)
+    return (
+        selectinload(Order.items),
+        selectinload(Order.user),
+        selectinload(Order.assigned_delivery_partner),
+    )
 
 
 def product_options():
@@ -277,6 +289,14 @@ def list_admin_orders(
     return [serialize_admin_order(order, db, settings) for order in orders]
 
 
+@router.get("/delivery-partners", response_model=list[AdminDeliveryPartnerOut])
+def list_delivery_partners(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    return [serialize_delivery_partner(partner, db) for partner in delivery_partners(db)]
+
+
 @router.patch("/orders/{order_id}/status", response_model=AdminOrderOut)
 def update_order_status(
     order_id: int,
@@ -292,12 +312,91 @@ def update_order_status(
         raise HTTPException(status_code=404, detail="Order not found")
 
     order.status = OrderStatus(payload.status)
+    if order.status in {
+        OrderStatus.CONFIRMED,
+        OrderStatus.PACKING,
+        OrderStatus.OUT_FOR_DELIVERY,
+        OrderStatus.DELIVERED,
+    }:
+        ensure_delivery_assignment(order, db)
     if order.status == OrderStatus.DELIVERED and order.payment_method == "cash_on_delivery":
         order.payment_status = PaymentStatus.PAID
 
     db.commit()
     db.refresh(order)
     return serialize_admin_order(order, db, settings)
+
+
+@router.patch("/orders/{order_id}/assignment", response_model=AdminOrderOut)
+def update_order_assignment(
+    order_id: int,
+    payload: AdminOrderAssignmentUpdate,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status in {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot change rider after pickup has started",
+        )
+
+    if payload.delivery_partner_id is None:
+        order.assigned_delivery_partner_id = None
+        order.assigned_delivery_partner = None
+    else:
+        partner = db.get(User, payload.delivery_partner_id)
+        if (
+            partner is None
+            or partner.role != UserRole.DELIVERY_PARTNER
+            or not partner.is_active
+        ):
+            raise HTTPException(status_code=404, detail="Delivery partner not found")
+        order.assigned_delivery_partner = partner
+        order.assigned_delivery_partner_id = partner.id
+
+    db.commit()
+    saved_order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    assert saved_order is not None
+    return serialize_admin_order(saved_order, db, settings)
+
+
+@router.patch("/orders/{order_id}/ready", response_model=AdminOrderOut)
+def mark_order_ready(
+    order_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status not in {OrderStatus.CONFIRMED, OrderStatus.PACKING}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed or packing orders can be marked ready",
+        )
+
+    ensure_delivery_assignment(order, db)
+    mark_store_ready(order, db)
+    if order.status == OrderStatus.CONFIRMED:
+        order.status = OrderStatus.PACKING
+
+    db.commit()
+    saved_order = db.scalar(
+        select(Order).options(*order_options()).where(Order.id == order_id)
+    )
+    assert saved_order is not None
+    return serialize_admin_order(saved_order, db, settings)
 
 
 @router.get("/categories", response_model=list[AdminCategoryOut])
