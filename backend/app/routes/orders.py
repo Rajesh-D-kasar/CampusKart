@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import get_current_user
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models import (
     Address,
@@ -18,6 +19,7 @@ from app.models import (
     Store,
     User,
 )
+from app.order_handoff import customer_dropoff_otp, handoff_state
 from app.promotions import PromotionError, apply_coupon
 from app.routes.cart import (
     DELIVERY_FEE_PAISE,
@@ -74,7 +76,7 @@ def serialize_order_summary(order: Order) -> dict:
     }
 
 
-def serialize_order(order: Order) -> dict:
+def serialize_order(order: Order, db: Session, settings: Settings) -> dict:
     data = serialize_order_summary(order)
     data.update(
         {
@@ -82,6 +84,8 @@ def serialize_order(order: Order) -> dict:
             "delivery_address_snapshot": order.delivery_address_snapshot,
             "delivery_instruction": order.delivery_instruction,
             **tracking_detail(order),
+            "customer_delivery_otp": customer_dropoff_otp(order, db, settings),
+            **handoff_state(order, db),
             "items": [
                 {
                     "id": item.id,
@@ -146,6 +150,7 @@ def place_order(
     payload: OrderCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
     cart = get_or_create_cart(current_user, db)
     if not cart.items:
@@ -237,7 +242,7 @@ def place_order(
     db.commit()
 
     saved_order = get_owned_order(order.id, current_user.id, db)
-    return serialize_order(saved_order)
+    return serialize_order(saved_order, db, settings)
 
 
 @router.get("", response_model=list[OrderSummaryOut])
@@ -259,5 +264,6 @@ def read_order(
     order_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
-    return serialize_order(get_owned_order(order_id, current_user.id, db))
+    return serialize_order(get_owned_order(order_id, current_user.id, db), db, settings)

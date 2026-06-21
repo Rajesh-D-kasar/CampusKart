@@ -375,6 +375,29 @@ class Order(TimestampMixin, Base):
     items: Mapped[list["OrderItem"]] = relationship(
         back_populates="order", cascade="all, delete-orphan"
     )
+    handoff_verification: Mapped[Optional["OrderHandoffVerification"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class OrderHandoffVerification(TimestampMixin, Base):
+    __tablename__ = "order_handoff_verifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    pickup_verified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True)
+    )
+    dropoff_verified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True)
+    )
+    pickup_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    dropoff_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+
+    order: Mapped["Order"] = relationship(back_populates="handoff_verification")
 
 
 class OrderItem(TimestampMixin, Base):

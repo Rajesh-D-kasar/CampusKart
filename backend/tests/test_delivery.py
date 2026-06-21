@@ -37,7 +37,9 @@ def address_payload() -> dict[str, str | bool]:
     }
 
 
-def place_confirmed_order(client, db_session: Session, email: str) -> Order:
+def place_confirmed_order(
+    client, db_session: Session, email: str
+) -> tuple[Order, dict[str, str]]:
     customer = customer_headers(client, email=email)
     product = db_session.scalar(select(Product).order_by(Product.id))
     assert product is not None
@@ -62,7 +64,29 @@ def place_confirmed_order(client, db_session: Session, email: str) -> Order:
         select(Order).where(Order.id == order_response.json()["id"])
     )
     assert order is not None
-    return order
+    db_session.refresh(order)
+    return order, customer
+
+
+def pickup_otp_for_order(client, order_id: int) -> str:
+    admin = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+    orders = client.get("/admin/orders", headers=admin)
+    assert orders.status_code == 200
+    order = next(item for item in orders.json() if item["id"] == order_id)
+    assert order["pickup_otp"]
+    assert order["items"]
+    assert order["delivery_partner"] is not None
+    return order["pickup_otp"]
+
+
+def customer_delivery_otp_for_order(
+    client, order_id: int, customer: dict[str, str]
+) -> str:
+    detail = client.get(f"/orders/{order_id}", headers=customer)
+    assert detail.status_code == 200
+    otp = detail.json()["customer_delivery_otp"]
+    assert otp
+    return otp
 
 
 def delivery_headers_for_order(client, order: Order) -> dict[str, str]:
@@ -74,19 +98,23 @@ def delivery_headers_for_order(client, order: Order) -> dict[str, str]:
 def test_delivery_partner_can_list_and_complete_assigned_order(
     client, db_session: Session
 ) -> None:
-    order = place_confirmed_order(client, db_session, "delivery-flow@example.com")
+    order, customer = place_confirmed_order(
+        client, db_session, "delivery-flow@example.com"
+    )
     headers = delivery_headers_for_order(client, order)
+    pickup_otp = pickup_otp_for_order(client, order.id)
 
     listed = client.get("/delivery/orders", headers=headers)
     summary_before = client.get("/delivery/summary", headers=headers)
     out_for_delivery = client.patch(
         f"/delivery/orders/{order.id}/status",
-        json={"status": "out_for_delivery"},
+        json={"status": "out_for_delivery", "otp": pickup_otp},
         headers=headers,
     )
+    customer_otp = customer_delivery_otp_for_order(client, order.id, customer)
     delivered = client.patch(
         f"/delivery/orders/{order.id}/status",
-        json={"status": "delivered"},
+        json={"status": "delivered", "otp": customer_otp},
         headers=headers,
     )
     summary_after = client.get("/delivery/summary", headers=headers)
@@ -98,14 +126,59 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
     assert summary_before.json()["active_orders"] == 1
     assert summary_before.json()["cod_collection_due"] == listed.json()[0]["total"]
     assert out_for_delivery.json()["status"] == "out_for_delivery"
+    assert out_for_delivery.json()["pickup_verified"] is True
+    assert out_for_delivery.json()["dropoff_verified"] is False
     assert delivered.json()["status"] == "delivered"
     assert delivered.json()["payment_status"] == "paid"
+    assert delivered.json()["dropoff_verified"] is True
     assert delivered.json()["customer_name"] == "Delivery Test Customer"
     assert delivered.json()["delivery_partner"]["phone"].startswith("+91")
     assert summary_after.json()["active_orders"] == 0
     assert summary_after.json()["delivered_orders"] == 1
     assert summary_after.json()["cod_collection_due"] == 0
     assert order.payment_status == PaymentStatus.PAID
+
+
+def test_delivery_requires_shop_pickup_otp_before_starting_route(
+    client, db_session: Session
+) -> None:
+    order, _customer = place_confirmed_order(
+        client, db_session, "missing-pickup-otp@example.com"
+    )
+    headers = delivery_headers_for_order(client, order)
+
+    response = client.patch(
+        f"/delivery/orders/{order.id}/status",
+        json={"status": "out_for_delivery"},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Pickup OTP is required"
+
+
+def test_delivery_requires_customer_otp_after_pickup(
+    client, db_session: Session
+) -> None:
+    order, _customer = place_confirmed_order(
+        client, db_session, "missing-customer-otp@example.com"
+    )
+    headers = delivery_headers_for_order(client, order)
+    pickup_otp = pickup_otp_for_order(client, order.id)
+    client.patch(
+        f"/delivery/orders/{order.id}/status",
+        json={"status": "out_for_delivery", "otp": pickup_otp},
+        headers=headers,
+    )
+
+    response = client.patch(
+        f"/delivery/orders/{order.id}/status",
+        json={"status": "delivered"},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Customer delivery OTP is required"
 
 
 def test_delivery_routes_reject_customers(client) -> None:
@@ -122,7 +195,9 @@ def test_delivery_routes_reject_customers(client) -> None:
 def test_delivery_partner_cannot_access_unassigned_order(
     client, db_session: Session
 ) -> None:
-    order = place_confirmed_order(client, db_session, "wrong-partner@example.com")
+    order, _customer = place_confirmed_order(
+        client, db_session, "wrong-partner@example.com"
+    )
     assigned_email = assigned_partner_email(order)
     assert assigned_email is not None
     other_partner = next(

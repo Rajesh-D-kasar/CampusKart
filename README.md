@@ -20,6 +20,7 @@ run locally, but structured like a real commerce system.
 - Alembic migrations for database schema management
 - JWT authentication with password hashing
 - Customer OTP login with expiry, resend cooldown, attempt limits, and optional SMTP delivery
+- Secure order handoff OTPs: shop pickup OTP plus separate customer delivery OTP
 - Guest cart in browser storage and authenticated cart sync after login
 - Address CRUD for checkout
 - Cash-on-delivery plus mock UPI/card payment flows
@@ -28,7 +29,7 @@ run locally, but structured like a real commerce system.
 - My Orders page with ETA, delivery partner, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
   inventory controls
-- Delivery partner dashboard for assigned deliveries and doorstep status updates
+- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, and doorstep handoff
 - Separate delivery partner website at `delivery-panel/`
 - Separate shop owner website at `shop-owner-panel/`
 - Security headers, trusted-host validation, Dockerfiles, and deployment config
@@ -159,6 +160,8 @@ It includes:
 - item checklist
 - COD collection reminders
 - status buttons for out-for-delivery and delivered
+- shop pickup OTP is required before starting the route
+- customer delivery OTP is required before marking the order delivered
 
 For deployment, set `delivery-panel/.env` or hosting env var:
 
@@ -182,6 +185,9 @@ It includes:
 
 - shop owner login
 - order queue with open/new/packing/done/all tabs
+- pack list for every order
+- assigned delivery partner details
+- pickup OTP card for safe handoff to the delivery boy
 - quick order status buttons
 - low-stock warning list
 - stock quantity and reorder alert updates
@@ -274,6 +280,20 @@ SMTP_PASSWORD=...
 OTP_EMAIL_FROM=no-reply@example.com
 ```
 
+## Order Handoff OTP
+
+Delivery security uses two separate OTPs:
+
+1. Shop owner sees a pickup OTP after confirming/packing an order.
+2. Delivery partner enters that pickup OTP before the order can move to
+   `out_for_delivery`.
+3. Customer sees a different delivery OTP on the order page.
+4. Delivery partner enters the customer OTP before the order can move to
+   `delivered`.
+
+This keeps the packed bag from going to the wrong rider and prevents final
+delivery from being marked without customer confirmation.
+
 ## Test Data
 
 The development catalog uses grocery sample product names and image URLs adapted
@@ -305,9 +325,11 @@ npm run build
 Expected current result:
 
 ```text
-Backend tests: 39 passed
+Backend tests: 45 passed
 Frontend tests: 4 passed
 Frontend build: passed
+Delivery panel build: passed
+Shop owner panel build: passed
 ```
 
 ## Project Structure

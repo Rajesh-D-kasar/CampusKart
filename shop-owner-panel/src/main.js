@@ -91,6 +91,16 @@ function formatStatus(value) {
   return String(value || "").replaceAll("_", " ");
 }
 
+function addressText(address = {}) {
+  return [
+    address.line1,
+    address.line2,
+    `${address.city || ""}, ${address.state || ""} ${address.postal_code || ""}`.trim(),
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -177,9 +187,7 @@ function nextOrderActions(order) {
   const actions = [];
   if (order.status === "placed") actions.push(["Confirm", "confirmed"]);
   if (order.status === "confirmed") actions.push(["Start packing", "packing"]);
-  if (order.status === "packing") actions.push(["Send for delivery", "out_for_delivery"]);
-  if (order.status === "out_for_delivery") actions.push(["Mark delivered", "delivered"]);
-  if (!["delivered", "cancelled"].includes(order.status)) {
+  if (!["out_for_delivery", "delivered", "cancelled"].includes(order.status)) {
     actions.push(["Cancel", "cancelled"]);
   }
   return actions;
@@ -343,6 +351,9 @@ function renderOrders() {
 
 function renderOrderCard(order) {
   const actions = nextOrderActions(order);
+  const address = order.delivery_address_snapshot || {};
+  const partner = order.delivery_partner;
+  const items = order.items || [];
   return `
     <article class="order-card">
       <div class="order-main">
@@ -358,6 +369,70 @@ function renderOrderCard(order) {
         </div>
       </div>
       <p class="order-note">${escapeHtml(order.tracking_message || "Order update pending")}</p>
+      <div class="fulfillment-grid">
+        <section class="pack-card">
+          <div>
+            <span class="eyebrow">Pack this order</span>
+            <strong>${escapeHtml(items.length)} item lines</strong>
+          </div>
+          <div class="pack-list">
+            ${items
+              .map(
+                (item) => `
+                  <label>
+                    <input type="checkbox" data-pack-item="${order.id}-${item.id}" />
+                    <span>${escapeHtml(item.product_name)}</span>
+                    <strong>${escapeHtml(item.quantity)} x ${escapeHtml(item.unit)}</strong>
+                  </label>
+                `
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="handoff-card">
+          <span class="eyebrow">Delivery handoff</span>
+          ${
+            partner
+              ? `
+                <strong>${escapeHtml(partner.name)}</strong>
+                <small>Phone: ${escapeHtml(partner.phone)}</small>
+                <small>Vehicle: ${escapeHtml(partner.vehicle_number)}</small>
+              `
+              : `
+                <strong>Assigning after confirmation</strong>
+                <small>Order confirm karte hi delivery partner show hoga.</small>
+              `
+          }
+          ${
+            order.pickup_otp
+              ? `
+                <div class="otp-box">
+                  <span>Pickup OTP</span>
+                  <strong>${escapeHtml(order.pickup_otp)}</strong>
+                  <small>Sirf assigned delivery boy ko dena jab packed bag handover ho.</small>
+                </div>
+              `
+              : `
+                <div class="handoff-status ${order.pickup_verified ? "verified" : ""}">
+                  ${order.pickup_verified ? "Pickup verified" : "Pickup OTP available after confirmation"}
+                </div>
+              `
+          }
+        </section>
+      </div>
+
+      <section class="customer-card">
+        <span class="eyebrow">Customer & address</span>
+        <strong>${escapeHtml(address.receiver_name || order.customer_name)}</strong>
+        <p>${escapeHtml(addressText(address) || "Address updating")}</p>
+        <small>Phone: ${escapeHtml(address.phone || order.customer_phone || "Not available")}</small>
+        ${
+          order.delivery_instruction
+            ? `<small>Note: ${escapeHtml(order.delivery_instruction)}</small>`
+            : ""
+        }
+      </section>
       <div class="action-row">
         ${actions
           .map(

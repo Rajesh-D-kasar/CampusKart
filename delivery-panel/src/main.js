@@ -98,10 +98,20 @@ function mapHref(address) {
 
 function nextAction(order) {
   if (order.status === "confirmed" || order.status === "packing") {
-    return { label: "Start delivery", status: "out_for_delivery" };
+    return {
+      label: "Verify shop OTP & start route",
+      status: "out_for_delivery",
+      otpLabel: "Shop pickup OTP",
+      otpHelp: "Packed bag lete waqt shop owner se OTP lo.",
+    };
   }
   if (order.status === "out_for_delivery") {
-    return { label: "Mark delivered", status: "delivered" };
+    return {
+      label: "Verify customer OTP & deliver",
+      status: "delivered",
+      otpLabel: "Customer delivery OTP",
+      otpHelp: "Order handover karte waqt customer se OTP lo.",
+    };
   }
   return null;
 }
@@ -182,8 +192,15 @@ async function loadDashboard() {
   }
 }
 
-async function updateOrderStatus(orderId, status) {
+async function updateOrderStatus(orderId, status, otp) {
   const order = state.orders.find((item) => item.id === orderId);
+  const cleanOtp = String(otp || "").trim();
+  if (!/^\d{6}$/.test(cleanOtp)) {
+    setError(elements.panelError, "6 digit OTP enter karo, phir status update hoga.");
+    document.querySelector(`[data-handoff-otp="${orderId}"]`)?.focus();
+    return;
+  }
+
   if (
     status === "delivered" &&
     order?.payment_method === "cash_on_delivery" &&
@@ -200,7 +217,7 @@ async function updateOrderStatus(orderId, status) {
   try {
     const updatedOrder = await apiFetch(`/delivery/orders/${orderId}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, otp: cleanOtp }),
     });
     state.orders = state.orders.map((item) =>
       item.id === orderId ? updatedOrder : item
@@ -388,6 +405,40 @@ function renderOrderCard(order) {
           .join("")}
       </details>
 
+      <section class="handoff-card">
+        <div>
+          <span>${action ? escapeHtml(action.otpLabel) : "Handoff complete"}</span>
+          <strong>
+            ${
+              order.status === "delivered"
+                ? "Order delivered"
+                : order.status === "out_for_delivery"
+                  ? "Customer OTP needed"
+                  : "Shop OTP needed"
+            }
+          </strong>
+          <small>${action ? escapeHtml(action.otpHelp) : "Pickup aur delivery dono verify ho chuke hain."}</small>
+        </div>
+        <div class="handoff-flags">
+          <span class="${order.pickup_verified ? "done" : ""}">Pickup ${order.pickup_verified ? "verified" : "pending"}</span>
+          <span class="${order.dropoff_verified ? "done" : ""}">Drop ${order.dropoff_verified ? "verified" : "pending"}</span>
+        </div>
+        ${
+          action
+            ? `<label class="otp-input-card">
+                <span>Enter 6 digit OTP</span>
+                <input
+                  inputmode="numeric"
+                  maxlength="6"
+                  pattern="[0-9]{6}"
+                  placeholder="000000"
+                  data-handoff-otp="${order.id}"
+                />
+              </label>`
+            : ""
+        }
+      </section>
+
       <div class="order-actions">
         ${
           action
@@ -445,9 +496,12 @@ elements.searchInput.addEventListener("input", (event) => {
 elements.ordersGrid.addEventListener("click", async (event) => {
   const statusButton = event.target.closest("[data-status-order]");
   if (statusButton) {
+    const orderId = Number(statusButton.dataset.statusOrder);
+    const otpInput = document.querySelector(`[data-handoff-otp="${orderId}"]`);
     await updateOrderStatus(
-      Number(statusButton.dataset.statusOrder),
-      statusButton.dataset.nextStatus
+      orderId,
+      statusButton.dataset.nextStatus,
+      otpInput?.value
     );
     return;
   }

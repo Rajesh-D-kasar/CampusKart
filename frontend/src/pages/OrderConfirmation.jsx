@@ -135,6 +135,20 @@ function OrderConfirmation() {
         </div>
       </section>
 
+      {order.customer_delivery_otp && (
+        <section className="checkout-card customer-otp-card">
+          <div>
+            <span className="eyebrow">Delivery OTP</span>
+            <h2>{order.customer_delivery_otp}</h2>
+            <p>
+              Ye OTP delivery boy ko tabhi batana jab aap order receive kar rahe
+              ho. Isse galat parcel handover avoid hota hai.
+            </p>
+          </div>
+          <span>{order.dropoff_verified ? "Verified" : "Keep private"}</span>
+        </section>
+      )}
+
       <div className="checkout-layout">
         <div className="checkout-card">
           <h2>Items</h2>

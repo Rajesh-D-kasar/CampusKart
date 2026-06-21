@@ -26,4 +26,5 @@ def test_initial_migration_creates_commerce_tables(tmp_path) -> None:
         "orders",
         "order_items",
         "auth_otp_codes",
+        "order_handoff_verifications",
     }.issubset(table_names)

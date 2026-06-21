@@ -332,6 +332,93 @@ button:disabled {
   color: #706851;
 }
 
+.fulfillment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 12px;
+}
+
+.pack-card,
+.handoff-card,
+.customer-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #eee8d9;
+  border-radius: 18px;
+  background: #fffaf0;
+}
+
+.pack-card strong,
+.handoff-card strong,
+.customer-card strong {
+  letter-spacing: -0.02em;
+}
+
+.pack-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pack-list label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #eee8d9;
+}
+
+.pack-list input {
+  width: 18px;
+  height: 18px;
+  accent-color: #1f8f3a;
+}
+
+.pack-list span,
+.customer-card p,
+.handoff-card small,
+.customer-card small {
+  margin: 0;
+  color: #706851;
+  line-height: 1.5;
+}
+
+.otp-box {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border-radius: 16px;
+  color: #16220f;
+  background: #fff0bf;
+}
+
+.otp-box span {
+  color: #7c5d10;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.otp-box strong {
+  font-size: 1.9rem;
+  letter-spacing: 0.16em;
+}
+
+.handoff-status {
+  padding: 11px 12px;
+  border-radius: 14px;
+  color: #8a5200;
+  background: #fff5d8;
+  font-weight: 900;
+}
+
+.handoff-status.verified {
+  color: #17612d;
+  background: #e8f8df;
+}
+
 .order-money {
   display: grid;
   justify-items: end;
@@ -450,7 +537,8 @@ button:disabled {
 @media (max-width: 1020px) {
   .login-screen,
   .work-grid,
-  .catalog-grid {
+  .catalog-grid,
+  .fulfillment-grid {
     grid-template-columns: 1fr;
   }
 

@@ -261,6 +261,11 @@ class OrderOut(OrderSummaryOut):
     delivery_address_snapshot: dict[str, str | None]
     delivery_instruction: str | None
     items: list[OrderItemOut]
+    customer_delivery_otp: str | None = None
+    pickup_verified: bool = False
+    dropoff_verified: bool = False
+    pickup_verified_at: datetime | None = None
+    dropoff_verified_at: datetime | None = None
     delivery_progress_percent: int = Field(ge=0, le=100)
     tracking_steps: list[OrderTrackingStepOut]
     updated_at: datetime
@@ -275,6 +280,7 @@ class DeliveryOrderOut(OrderOut):
 
 class DeliveryOrderStatusUpdate(BaseModel):
     status: Literal["out_for_delivery", "delivered"]
+    otp: str | None = Field(default=None, min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
 class DeliverySummaryOut(BaseModel):
@@ -323,7 +329,16 @@ class AdminSummaryOut(BaseModel):
 class AdminOrderOut(OrderSummaryOut):
     customer_name: str
     customer_email: EmailStr
+    customer_phone: str | None
     delivery_city: str | None
+    delivery_address_snapshot: dict[str, str | None]
+    delivery_instruction: str | None
+    items: list[OrderItemOut]
+    pickup_otp: str | None = None
+    pickup_verified: bool = False
+    dropoff_verified: bool = False
+    pickup_verified_at: datetime | None = None
+    dropoff_verified_at: datetime | None = None
 
 
 class AdminOrderStatusUpdate(BaseModel):

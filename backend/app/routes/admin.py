@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_admin
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models import (
     Category,
@@ -29,6 +30,7 @@ from app.schemas import (
     AdminProductUpdate,
     AdminSummaryOut,
 )
+from app.order_handoff import handoff_state, shop_pickup_otp
 from app.tracking import tracking_summary
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -111,7 +113,22 @@ def ensure_unique_product_slug(
         raise HTTPException(status_code=409, detail="Product slug already exists")
 
 
-def serialize_admin_order(order: Order) -> dict:
+def serialize_order_items(order: Order) -> list[dict]:
+    return [
+        {
+            "id": item.id,
+            "product_id": item.product_id,
+            "product_name": item.product_name,
+            "unit": item.unit,
+            "unit_price": paise_to_rupees(item.unit_price_paise),
+            "quantity": item.quantity,
+            "line_total": paise_to_rupees(item.line_total_paise),
+        }
+        for item in order.items
+    ]
+
+
+def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict:
     item_count = sum(item.quantity for item in order.items)
     snapshot = order.delivery_address_snapshot or {}
     return {
@@ -129,7 +146,13 @@ def serialize_admin_order(order: Order) -> dict:
         "created_at": order.created_at,
         "customer_name": order.user.full_name,
         "customer_email": order.user.email,
+        "customer_phone": order.user.phone,
         "delivery_city": snapshot.get("city"),
+        "delivery_address_snapshot": snapshot,
+        "delivery_instruction": order.delivery_instruction,
+        "items": serialize_order_items(order),
+        "pickup_otp": shop_pickup_otp(order, db, settings),
+        **handoff_state(order, db),
     }
 
 
@@ -244,13 +267,14 @@ def read_admin_summary(
 def list_admin_orders(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> list[dict]:
     orders = db.scalars(
         select(Order)
         .options(*order_options())
         .order_by(Order.created_at.desc(), Order.id.desc())
     ).all()
-    return [serialize_admin_order(order) for order in orders]
+    return [serialize_admin_order(order, db, settings) for order in orders]
 
 
 @router.patch("/orders/{order_id}/status", response_model=AdminOrderOut)
@@ -259,6 +283,7 @@ def update_order_status(
     payload: AdminOrderStatusUpdate,
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
     order = db.scalar(
         select(Order).options(*order_options()).where(Order.id == order_id)
@@ -272,7 +297,7 @@ def update_order_status(
 
     db.commit()
     db.refresh(order)
-    return serialize_admin_order(order)
+    return serialize_admin_order(order, db, settings)
 
 
 @router.get("/categories", response_model=list[AdminCategoryOut])

@@ -1094,6 +1094,40 @@ button.category-card {
   background: #fbfdf9;
 }
 
+.customer-otp-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+  border-color: #f0d27b;
+  background:
+    linear-gradient(135deg, rgb(255 184 77 / 22%), transparent),
+    #fffdf4;
+}
+
+.customer-otp-card h2 {
+  margin: 4px 0;
+  font-size: clamp(2rem, 6vw, 4rem);
+  letter-spacing: 0.18em;
+}
+
+.customer-otp-card p {
+  max-width: 680px;
+  margin: 0;
+  color: #6b5a30;
+  line-height: 1.6;
+}
+
+.customer-otp-card > span {
+  min-width: max-content;
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: #7c5d10;
+  background: #fff0bf;
+  font-weight: 900;
+}
+
 .delivery-meta-grid small {
   color: #657066;
   line-height: 1.5;
@@ -1732,6 +1766,11 @@ button.category-card {
   .delivery-panel-header,
   .delivery-order-header {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-otp-card {
+    align-items: flex-start;
     flex-direction: column;
   }
 

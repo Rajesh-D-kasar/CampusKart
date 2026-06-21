@@ -3,8 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_delivery_partner
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models import Order, OrderStatus, PaymentStatus, User, UserRole
+from app.order_handoff import (
+    DROPOFF_PURPOSE,
+    PICKUP_PURPOSE,
+    handoff_state,
+    verify_handoff_otp,
+)
 from app.schemas import DeliveryOrderOut, DeliveryOrderStatusUpdate, DeliverySummaryOut
 from app.tracking import assigned_partner_email, tracking_detail
 
@@ -43,7 +50,7 @@ def can_access_order(order: Order, current_user: User) -> bool:
     return assigned_partner_email(order) == current_user.email
 
 
-def serialize_delivery_order(order: Order) -> dict:
+def serialize_delivery_order(order: Order, db: Session) -> dict:
     item_count = sum(item.quantity for item in order.items)
     snapshot = order.delivery_address_snapshot or {}
     return {
@@ -62,6 +69,8 @@ def serialize_delivery_order(order: Order) -> dict:
         "address_id": order.address_id,
         "delivery_address_snapshot": snapshot,
         "delivery_instruction": order.delivery_instruction,
+        "customer_delivery_otp": None,
+        **handoff_state(order, db),
         "items": [
             {
                 "id": item.id,
@@ -150,7 +159,7 @@ def list_delivery_orders(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     return [
-        serialize_delivery_order(order)
+        serialize_delivery_order(order, db)
         for order in list_accessible_delivery_orders(current_user, db)
     ]
 
@@ -161,6 +170,7 @@ def update_delivery_order_status(
     payload: DeliveryOrderStatusUpdate,
     current_user: User = Depends(require_delivery_partner),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
     order = get_accessible_order(order_id, current_user, db)
     next_status = OrderStatus(payload.status)
@@ -171,10 +181,15 @@ def update_delivery_order_status(
             detail="This delivery status transition is not allowed",
         )
 
+    if next_status == OrderStatus.OUT_FOR_DELIVERY:
+        verify_handoff_otp(order, db, settings, PICKUP_PURPOSE, payload.otp)
+    if next_status == OrderStatus.DELIVERED:
+        verify_handoff_otp(order, db, settings, DROPOFF_PURPOSE, payload.otp)
+
     order.status = next_status
     if order.status == OrderStatus.DELIVERED and order.payment_method == "cash_on_delivery":
         order.payment_status = PaymentStatus.PAID
 
     db.commit()
     saved_order = get_accessible_order(order_id, current_user, db)
-    return serialize_delivery_order(saved_order)
+    return serialize_delivery_order(saved_order, db)
