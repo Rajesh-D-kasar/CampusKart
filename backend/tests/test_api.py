@@ -59,6 +59,25 @@ def test_list_categories_returns_counts(client) -> None:
     assert sum(category["product_count"] for category in categories) == len(PRODUCTS)
 
 
+def test_product_suggestions_include_products_and_categories(client) -> None:
+    response = client.get("/products/suggestions", params={"q": "milk"})
+    suggestions = response.json()
+
+    assert response.status_code == 200
+    assert suggestions
+    assert any(item["type"] == "product" and item["label"] == "Milk" for item in suggestions)
+    assert all(item["href"].startswith("/products") for item in suggestions)
+
+
+def test_product_suggestions_return_default_categories(client) -> None:
+    response = client.get("/products/suggestions")
+    suggestions = response.json()
+
+    assert response.status_code == 200
+    assert suggestions[0]["type"] == "category"
+    assert len(suggestions) <= 8
+
+
 def test_get_product_returns_404_for_unknown_id(client) -> None:
     response = client.get("/products/999")
 

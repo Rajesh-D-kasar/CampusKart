@@ -15,6 +15,13 @@ export const getProductRecommendations = async (productId) => {
   return response.data;
 };
 
+export const getProductSuggestions = async (query = "") => {
+  const response = await API.get("/products/suggestions", {
+    params: query ? { q: query } : {},
+  });
+  return response.data;
+};
+
 export const getCategories = async () => {
   const response = await API.get("/products/categories");
   return response.data;

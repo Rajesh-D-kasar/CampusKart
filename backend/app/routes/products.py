@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import Category, Inventory, Product
-from app.schemas import CategoryOut, ProductOut
+from app.schemas import CategoryOut, ProductOut, ProductSuggestionOut
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -81,6 +81,71 @@ def list_categories(db: Session = Depends(get_db)) -> list[dict[str, int | str |
         }
         for category, product_count in db.execute(statement).all()
     ]
+
+
+@router.get("/suggestions", response_model=list[ProductSuggestionOut])
+def list_product_suggestions(
+    q: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=8, ge=1, le=12),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    term = (q or "").strip()
+    suggestions: list[dict] = []
+    category_statement = (
+        select(Category)
+        .where(Category.is_active.is_(True))
+        .order_by(Category.display_order, Category.name)
+        .limit(4 if not term else min(4, limit))
+    )
+
+    if term:
+        pattern = f"%{term}%"
+        category_statement = category_statement.where(
+            or_(Category.name.ilike(pattern), Category.slug.ilike(pattern))
+        )
+
+    for category in db.scalars(category_statement).all():
+        suggestions.append(
+            {
+                "type": "category",
+                "label": category.name,
+                "value": category.slug,
+                "href": f"/products?category={category.slug}",
+                "category_slug": category.slug,
+            }
+        )
+
+    remaining = limit - len(suggestions)
+    if remaining <= 0:
+        return suggestions[:limit]
+
+    product_statement = product_query().where(
+        Product.is_active.is_(True),
+        Product.category.has(Category.is_active.is_(True)),
+    )
+    if term:
+        pattern = f"%{term}%"
+        product_statement = product_statement.where(
+            or_(
+                Product.name.ilike(pattern),
+                Product.description.ilike(pattern),
+                Product.category.has(Category.name.ilike(pattern)),
+            )
+        )
+    product_statement = product_statement.order_by(Product.name).limit(remaining)
+
+    for product in db.scalars(product_statement).all():
+        suggestions.append(
+            {
+                "type": "product",
+                "label": product.name,
+                "value": product.name,
+                "href": f"/products/{product.id}",
+                "product_id": product.id,
+                "category_slug": product.category_slug,
+            }
+        )
+    return suggestions
 
 
 @router.get("/{product_id}/recommendations", response_model=list[ProductOut])

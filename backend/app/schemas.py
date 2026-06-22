@@ -32,6 +32,15 @@ class CategoryOut(BaseModel):
     product_count: int = Field(ge=0)
 
 
+class ProductSuggestionOut(BaseModel):
+    type: Literal["product", "category"]
+    label: str
+    value: str
+    href: str
+    product_id: int | None = None
+    category_slug: str | None = None
+
+
 class PromoBannerOut(BaseModel):
     id: str
     title: str

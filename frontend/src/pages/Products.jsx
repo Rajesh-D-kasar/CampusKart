@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCategories, getProducts } from "../api/productApi";
 import CategoryCard from "../components/CategoryCard";
 import ProductCard from "../components/ProductCard";
@@ -18,6 +18,7 @@ function Products() {
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [status, setStatus] = useState("loading");
   const { addItem } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -120,6 +121,21 @@ function Products() {
     });
   };
 
+  const handleSuggestionSelect = (suggestion) => {
+    if (suggestion.type === "product" && suggestion.product_id) {
+      navigate(`/products/${suggestion.product_id}`);
+      return;
+    }
+    setQuery("");
+    setSelectedCategory(suggestion.category_slug || "");
+    setSort("name");
+    updateUrl({
+      queryValue: "",
+      categoryValue: suggestion.category_slug || "",
+      sortValue: "name",
+    });
+  };
+
   const visibleProducts = useMemo(() => {
     if (!showInStockOnly) return products;
     return products.filter((product) => product.in_stock);
@@ -140,7 +156,11 @@ function Products() {
           <span className="eyebrow">Campus store</span>
           <h1>{selectedCategoryName}</h1>
         </div>
-        <SearchBar value={query} onChange={handleQueryChange} />
+        <SearchBar
+          value={query}
+          onChange={handleQueryChange}
+          onSelect={handleSuggestionSelect}
+        />
       </div>
 
       {categories.length > 0 && (

@@ -30,6 +30,7 @@ run locally, but structured like a real commerce system.
 - Admin-triggered Razorpay refund execution for paid gateway orders
 - Refund status sync, payment transaction history, and settlement summary
 - Dedicated product detail pages with related product recommendations
+- Search suggestions with product/category autocomplete
 - Delivered-order ratings and review tags for customer feedback
 - Store-level inventory and stock reservation during checkout
 - My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
@@ -226,7 +227,7 @@ VITE_API_URL=https://your-api-domain.example
 | Area | Endpoints |
 | --- | --- |
 | Health | `GET /health`, `GET /health/database` |
-| Products | `GET /products`, `GET /products/categories`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
+| Products | `GET /products`, `GET /products/categories`, `GET /products/suggestions`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
 | Offers | `GET /offers`, `POST /offers/coupons/preview` |
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
@@ -408,7 +409,7 @@ blinkit_clone/
 ## Roadmap
 
 - CI workflow and production observability
-- Search suggestions and autocomplete
+- Customer wallet/refund credit history
 
 ## Notes
 

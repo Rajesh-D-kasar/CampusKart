@@ -108,7 +108,7 @@ Delivery partners can use `/delivery` after an order is confirmed or packing.
 | Area | Endpoints |
 | --- | --- |
 | Health | `GET /health`, `GET /health/database` |
-| Products | `GET /products`, `GET /products/categories`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
+| Products | `GET /products`, `GET /products/categories`, `GET /products/suggestions`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
 | Offers | `GET /offers`, `POST /offers/coupons/preview` |
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
