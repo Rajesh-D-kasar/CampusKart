@@ -24,3 +24,8 @@ export const getOrderInvoice = async (orderId) => {
   const response = await API.get(`/orders/${orderId}/invoice`);
   return response.data;
 };
+
+export const submitOrderReview = async (orderId, reviewData) => {
+  const response = await API.put(`/orders/${orderId}/review`, reviewData);
+  return response.data;
+};

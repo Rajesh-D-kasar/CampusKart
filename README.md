@@ -30,6 +30,7 @@ run locally, but structured like a real commerce system.
 - Admin-triggered Razorpay refund execution for paid gateway orders
 - Refund status sync, payment transaction history, and settlement summary
 - Dedicated product detail pages with related product recommendations
+- Delivered-order ratings and review tags for customer feedback
 - Store-level inventory and stock reservation during checkout
 - My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
@@ -231,7 +232,7 @@ VITE_API_URL=https://your-api-domain.example
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/review`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
 | Delivery | `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
@@ -407,7 +408,7 @@ blinkit_clone/
 ## Roadmap
 
 - CI workflow and production observability
-- Order rating/review workflow after delivery
+- Delivery partner earnings and COD reconciliation
 
 ## Notes
 

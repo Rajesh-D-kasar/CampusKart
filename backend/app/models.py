@@ -390,6 +390,9 @@ class Order(TimestampMixin, Base):
         back_populates="order"
     )
     notifications: Mapped[list["Notification"]] = relationship(back_populates="order")
+    review: Mapped[Optional["OrderReview"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan", uselist=False
+    )
     delivery_locations: Mapped[list["DeliveryLocation"]] = relationship(
         back_populates="order", cascade="all, delete-orphan"
     )
@@ -400,7 +403,7 @@ class OrderHandoffVerification(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, index=True
+        ForeignKey("orders.id", ondelete="CASCADE"), index=True
     )
     pickup_verified_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True)
@@ -481,6 +484,59 @@ class PaymentTransaction(TimestampMixin, Base):
 
     order: Mapped[Optional["Order"]] = relationship(back_populates="payment_transactions")
     user: Mapped[Optional["User"]] = relationship(foreign_keys=[user_id])
+
+
+class OrderReview(TimestampMixin, Base):
+    __tablename__ = "order_reviews"
+    __table_args__ = (
+        UniqueConstraint("order_id", name="uq_order_reviews_order_id"),
+        CheckConstraint(
+            "overall_rating >= 1 AND overall_rating <= 5",
+            name="overall_rating_range",
+        ),
+        CheckConstraint(
+            "product_rating >= 1 AND product_rating <= 5",
+            name="product_rating_range",
+        ),
+        CheckConstraint(
+            "delivery_rating >= 1 AND delivery_rating <= 5",
+            name="delivery_rating_range",
+        ),
+        CheckConstraint(
+            "seller_rating >= 1 AND seller_rating <= 5",
+            name="seller_rating_range",
+        ),
+        Index("ix_order_reviews_user_created", "user_id", "created_at"),
+        Index("ix_order_reviews_store_created", "store_id", "created_at"),
+        Index("ix_order_reviews_partner_created", "delivery_partner_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    store_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("stores.id", ondelete="SET NULL"), index=True
+    )
+    delivery_partner_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    overall_rating: Mapped[int] = mapped_column(Integer)
+    product_rating: Mapped[int] = mapped_column(Integer)
+    delivery_rating: Mapped[int] = mapped_column(Integer)
+    seller_rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[Optional[str]] = mapped_column(String(500))
+    issue_tags: Mapped[Optional[list[str]]] = mapped_column(JSON)
+
+    order: Mapped["Order"] = relationship(back_populates="review")
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    delivery_partner: Mapped[Optional["User"]] = relationship(
+        foreign_keys=[delivery_partner_id]
+    )
+    store: Mapped[Optional["Store"]] = relationship(foreign_keys=[store_id])
 
 
 class Notification(TimestampMixin, Base):

@@ -27,6 +27,7 @@ from app.order_ops import (
     refund_totals_by_refund_id,
     serialize_delivery_location,
     serialize_order_item,
+    serialize_order_review,
     serialize_payment_transaction,
 )
 from app.delivery_assignment import (
@@ -104,6 +105,7 @@ def order_options():
         selectinload(Order.assigned_delivery_partner),
         selectinload(Order.delivery_locations),
         selectinload(Order.payment_transactions),
+        selectinload(Order.review),
     )
 
 
@@ -166,6 +168,7 @@ def serialize_admin_order(order: Order, db: Session, settings: Settings) -> dict
         "total": paise_to_rupees(order.total_paise),
         **tracking_summary(order),
         "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
+        "review": serialize_order_review(order.review),
         "created_at": order.created_at,
         "customer_name": order.user.full_name,
         "customer_email": order.user.email,

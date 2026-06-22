@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CartItem, Inventory, Product
+from app.models import CartItem, Inventory, Order, OrderReview, OrderStatus, Product
 
 
 def auth_headers(client, email: str = "order-user@example.com") -> dict[str, str]:
@@ -257,3 +257,73 @@ def test_customer_can_cancel_order_and_release_reserved_stock(
     assert inventory.reserved_quantity == reserved_before
     assert notifications.status_code == 200
     assert notifications.json()[0]["event_type"] == "order.cancelled"
+
+
+def test_customer_can_review_delivered_order(client, db_session: Session) -> None:
+    headers = auth_headers(client, email="review-order@example.com")
+    product = first_product(db_session)
+    address = client.post("/addresses", json=address_payload(), headers=headers)
+    client.post(
+        "/cart/items",
+        json={"product_id": product.id, "quantity": 1},
+        headers=headers,
+    )
+    order = client.post(
+        "/orders",
+        json={"address_id": address.json()["id"]},
+        headers=headers,
+    )
+
+    too_early = client.put(
+        f"/orders/{order.json()['id']}/review",
+        json={
+            "overall_rating": 5,
+            "product_rating": 5,
+            "delivery_rating": 5,
+            "seller_rating": 5,
+        },
+        headers=headers,
+    )
+    db_order = db_session.scalar(select(Order).where(Order.id == order.json()["id"]))
+    assert db_order is not None
+    db_order.status = OrderStatus.DELIVERED
+    db_session.commit()
+
+    created = client.put(
+        f"/orders/{order.json()['id']}/review",
+        json={
+            "overall_rating": 5,
+            "product_rating": 4,
+            "delivery_rating": 5,
+            "seller_rating": 4,
+            "comment": "Fresh items and fast handoff.",
+            "issue_tags": ["Fresh", "Fast Delivery", "fresh"],
+        },
+        headers=headers,
+    )
+    updated = client.put(
+        f"/orders/{order.json()['id']}/review",
+        json={
+            "overall_rating": 4,
+            "product_rating": 4,
+            "delivery_rating": 5,
+            "seller_rating": 4,
+            "comment": "Good delivery experience.",
+            "issue_tags": ["fast delivery"],
+        },
+        headers=headers,
+    )
+    detail = client.get(f"/orders/{order.json()['id']}", headers=headers)
+    orders = client.get("/orders", headers=headers)
+
+    assert too_early.status_code == 409
+    assert created.status_code == 200
+    assert created.json()["issue_tags"] == ["fresh", "fast_delivery"]
+    assert updated.status_code == 200
+    assert updated.json()["overall_rating"] == 4
+    assert detail.json()["review"]["comment"] == "Good delivery experience."
+    assert orders.json()[0]["review"]["overall_rating"] == 4
+    reviews = db_session.scalars(
+        select(OrderReview).where(OrderReview.order_id == order.json()["id"])
+    ).all()
+    assert len(reviews) == 1

@@ -174,6 +174,13 @@ function MyOrders() {
               {order.delivery_partner && (
                 <small>{order.delivery_partner.name}</small>
               )}
+              {order.status === "delivered" && (
+                <small>
+                  {order.review
+                    ? `Rated ${order.review.overall_rating}/5`
+                    : "Ready for review"}
+                </small>
+              )}
               <small>{formatPaymentMethod(order.payment_method)}</small>
               <Link className="button button-small" to={`/orders/${order.id}`}>
                 View details

@@ -6,6 +6,7 @@ from app.models import (
     Inventory,
     Order,
     OrderItem,
+    OrderReview,
     OrderStatus,
     PaymentStatus,
     PaymentTransaction,
@@ -131,6 +132,23 @@ def serialize_payment_transaction(transaction: PaymentTransaction) -> dict:
         "currency": transaction.currency,
         "verified": transaction.verified,
         "created_at": transaction.created_at,
+    }
+
+
+def serialize_order_review(review: OrderReview | None) -> dict | None:
+    if review is None:
+        return None
+    return {
+        "id": review.id,
+        "order_id": review.order_id,
+        "overall_rating": review.overall_rating,
+        "product_rating": review.product_rating,
+        "delivery_rating": review.delivery_rating,
+        "seller_rating": review.seller_rating,
+        "comment": review.comment,
+        "issue_tags": review.issue_tags or [],
+        "created_at": review.created_at,
+        "updated_at": review.updated_at,
     }
 
 

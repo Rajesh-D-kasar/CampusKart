@@ -283,6 +283,28 @@ class OrderLifecycleEventOut(BaseModel):
     timestamp: datetime | None = None
 
 
+class OrderReviewCreate(BaseModel):
+    overall_rating: int = Field(ge=1, le=5)
+    product_rating: int = Field(ge=1, le=5)
+    delivery_rating: int = Field(ge=1, le=5)
+    seller_rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=500)
+    issue_tags: list[str] = Field(default_factory=list)
+
+
+class OrderReviewOut(BaseModel):
+    id: int
+    order_id: int
+    overall_rating: int = Field(ge=1, le=5)
+    product_rating: int = Field(ge=1, le=5)
+    delivery_rating: int = Field(ge=1, le=5)
+    seller_rating: int = Field(ge=1, le=5)
+    comment: str | None = None
+    issue_tags: list[str] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+
 class OrderSummaryOut(BaseModel):
     id: int
     order_number: str
@@ -299,6 +321,7 @@ class OrderSummaryOut(BaseModel):
     delivery_partner: DeliveryPartnerOut | None = None
     delivery_location: DeliveryLocationOut | None = None
     tracking_message: str
+    review: OrderReviewOut | None = None
     created_at: datetime
 
 

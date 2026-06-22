@@ -14,6 +14,7 @@ from app.models import (
     Inventory,
     Order,
     OrderItem,
+    OrderReview,
     OrderStatus,
     PaymentStatus,
     PaymentTransaction,
@@ -29,6 +30,7 @@ from app.order_ops import (
     latest_delivery_location,
     serialize_delivery_location,
     serialize_order_item,
+    serialize_order_review,
 )
 from app.payment_utils import verify_razorpay_payment_signature
 from app.promotions import PromotionError, apply_coupon
@@ -42,6 +44,8 @@ from app.schemas import (
     OrderCreate,
     OrderInvoiceOut,
     OrderOut,
+    OrderReviewCreate,
+    OrderReviewOut,
     OrderSummaryOut,
 )
 from app.tracking import tracking_detail, tracking_summary
@@ -90,6 +94,7 @@ def serialize_order_summary(order: Order) -> dict:
         "total": paise_to_rupees(order.total_paise),
         **tracking_summary(order),
         "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
+        "review": serialize_order_review(order.review),
         "created_at": order.created_at,
     }
 
@@ -118,6 +123,7 @@ def order_options():
         selectinload(Order.user),
         selectinload(Order.assigned_delivery_partner),
         selectinload(Order.delivery_locations),
+        selectinload(Order.review),
     )
 
 
@@ -126,6 +132,7 @@ def get_owned_order(order_id: int, user_id: int, db: Session) -> Order:
         select(Order)
         .options(*order_options())
         .where(Order.id == order_id, Order.user_id == user_id)
+        .execution_options(populate_existing=True)
     )
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -322,6 +329,7 @@ def list_orders(
         .options(*order_options())
         .where(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
+        .execution_options(populate_existing=True)
     ).all()
     return [serialize_order_summary(order) for order in orders]
 
@@ -334,6 +342,66 @@ def read_order(
     settings: Settings = Depends(get_settings),
 ) -> dict:
     return serialize_order(get_owned_order(order_id, current_user.id, db), db, settings)
+
+
+def normalized_issue_tags(tags: list[str]) -> list[str]:
+    cleaned = []
+    for tag in tags:
+        value = tag.strip().lower().replace(" ", "_")
+        if not value:
+            continue
+        if len(value) > 40:
+            raise HTTPException(status_code=400, detail="Issue tag is too long")
+        if value not in cleaned:
+            cleaned.append(value)
+    if len(cleaned) > 6:
+        raise HTTPException(status_code=400, detail="Select up to 6 issue tags")
+    return cleaned
+
+
+@router.put("/{order_id}/review", response_model=OrderReviewOut)
+def submit_order_review(
+    order_id: int,
+    payload: OrderReviewCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    order = get_owned_order(order_id, current_user.id, db)
+    if order.status != OrderStatus.DELIVERED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Review can be submitted only after delivery",
+        )
+
+    comment = payload.comment.strip() if payload.comment else None
+    review = db.scalar(select(OrderReview).where(OrderReview.order_id == order.id))
+    if review is None:
+        review = OrderReview(
+            order_id=order.id,
+            user_id=current_user.id,
+            store_id=order.store_id,
+            delivery_partner_id=order.assigned_delivery_partner_id,
+            overall_rating=payload.overall_rating,
+            product_rating=payload.product_rating,
+            delivery_rating=payload.delivery_rating,
+            seller_rating=payload.seller_rating,
+            comment=comment,
+            issue_tags=normalized_issue_tags(payload.issue_tags),
+        )
+        db.add(review)
+    else:
+        review.overall_rating = payload.overall_rating
+        review.product_rating = payload.product_rating
+        review.delivery_rating = payload.delivery_rating
+        review.seller_rating = payload.seller_rating
+        review.comment = comment
+        review.issue_tags = normalized_issue_tags(payload.issue_tags)
+        review.delivery_partner_id = order.assigned_delivery_partner_id
+        review.store_id = order.store_id
+
+    db.commit()
+    db.refresh(review)
+    return serialize_order_review(review)
 
 
 @router.patch("/{order_id}/cancel", response_model=OrderOut)

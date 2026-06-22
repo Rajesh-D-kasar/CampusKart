@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { cancelOrder, getOrder, getOrderInvoice } from "../api/orderApi";
+import {
+  cancelOrder,
+  getOrder,
+  getOrderInvoice,
+  submitOrderReview,
+} from "../api/orderApi";
 
 function Price({ value }) {
   return (
@@ -37,6 +42,24 @@ function formatEta(order) {
   return `${order.eta_minutes} min`;
 }
 
+const REVIEW_TAGS = [
+  ["fresh", "Fresh items"],
+  ["fast_delivery", "Fast delivery"],
+  ["polite_partner", "Polite partner"],
+  ["good_packing", "Good packing"],
+  ["missing_item", "Missing item"],
+  ["late_delivery", "Late delivery"],
+];
+
+const DEFAULT_REVIEW_FORM = {
+  overall_rating: 5,
+  product_rating: 5,
+  delivery_rating: 5,
+  seller_rating: 5,
+  comment: "",
+  issue_tags: [],
+};
+
 function OrderConfirmation() {
   const { orderId } = useParams();
   const location = useLocation();
@@ -45,6 +68,9 @@ function OrderConfirmation() {
   const [error, setError] = useState("");
   const [invoice, setInvoice] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [reviewForm, setReviewForm] = useState(DEFAULT_REVIEW_FORM);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
 
   useEffect(() => {
     if (order) return;
@@ -63,6 +89,18 @@ function OrderConfirmation() {
 
     loadOrder();
   }, [order, orderId]);
+
+  useEffect(() => {
+    if (!order?.review) return;
+    setReviewForm({
+      overall_rating: order.review.overall_rating,
+      product_rating: order.review.product_rating,
+      delivery_rating: order.review.delivery_rating,
+      seller_rating: order.review.seller_rating,
+      comment: order.review.comment || "",
+      issue_tags: order.review.issue_tags || [],
+    });
+  }, [order?.review]);
 
   if (loading) {
     return (
@@ -88,6 +126,7 @@ function OrderConfirmation() {
   const lifecycleEvents = order.lifecycle_events || [];
   const partner = order.delivery_partner;
   const canCancel = ["placed", "confirmed", "packing"].includes(order.status);
+  const canReview = order.status === "delivered";
 
   const handleCancel = async () => {
     const reason = window.prompt("Cancel reason likho:", "Ordered by mistake");
@@ -110,6 +149,38 @@ function OrderConfirmation() {
       setActionError(
         invoiceError.response?.data?.detail || "Could not load invoice."
       );
+    }
+  };
+
+  const handleRatingChange = (field, value) => {
+    setReviewForm((current) => ({
+      ...current,
+      [field]: Number(value),
+    }));
+  };
+
+  const toggleReviewTag = (tag) => {
+    setReviewForm((current) => ({
+      ...current,
+      issue_tags: current.issue_tags.includes(tag)
+        ? current.issue_tags.filter((item) => item !== tag)
+        : [...current.issue_tags, tag],
+    }));
+  };
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+    setActionError("");
+    setReviewMessage("");
+    setReviewSaving(true);
+    try {
+      const review = await submitOrderReview(order.id, reviewForm);
+      setOrder((current) => ({ ...current, review }));
+      setReviewMessage("Thanks! Review save ho gaya.");
+    } catch (reviewError) {
+      setActionError(reviewError.response?.data?.detail || "Could not save review.");
+    } finally {
+      setReviewSaving(false);
     }
   };
 
@@ -317,6 +388,75 @@ function OrderConfirmation() {
               <Price value={invoice.total} />
             </strong>
           </div>
+        </section>
+      )}
+
+      {canReview && (
+        <section className="checkout-card review-card">
+          <div className="section-heading review-heading">
+            <div>
+              <span className="eyebrow">Order feedback</span>
+              <h2>{order.review ? "Update your review" : "Rate your order"}</h2>
+              <p>Delivery ke baad quick feedback do, taaki service better ho.</p>
+            </div>
+            {order.review && (
+              <span className="status-chip">
+                Rated {order.review.overall_rating}/5
+              </span>
+            )}
+          </div>
+          <form className="review-form" onSubmit={handleReviewSubmit}>
+            {[
+              ["overall_rating", "Overall"],
+              ["product_rating", "Products"],
+              ["delivery_rating", "Delivery"],
+              ["seller_rating", "Seller"],
+            ].map(([field, label]) => (
+              <label key={field}>
+                {label}
+                <select
+                  value={reviewForm[field]}
+                  onChange={(event) => handleRatingChange(field, event.target.value)}
+                >
+                  {[5, 4, 3, 2, 1].map((rating) => (
+                    <option key={rating} value={rating}>
+                      {rating} star{rating === 1 ? "" : "s"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            <label className="review-comment">
+              Comment
+              <textarea
+                maxLength={500}
+                placeholder="Freshness, packing, delivery experience..."
+                value={reviewForm.comment}
+                onChange={(event) =>
+                  setReviewForm((current) => ({
+                    ...current,
+                    comment: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <div className="review-tags">
+              {REVIEW_TAGS.map(([tag, label]) => (
+                <button
+                  className={reviewForm.issue_tags.includes(tag) ? "is-active" : ""}
+                  key={tag}
+                  onClick={() => toggleReviewTag(tag)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button className="button" disabled={reviewSaving} type="submit">
+              {reviewSaving ? "Saving..." : order.review ? "Update review" : "Submit review"}
+            </button>
+            {reviewMessage && <p className="form-success">{reviewMessage}</p>}
+          </form>
         </section>
       )}
 
