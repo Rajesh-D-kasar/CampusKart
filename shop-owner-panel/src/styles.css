@@ -196,6 +196,7 @@ button:disabled {
 .partner-select select,
 .product-manage-row input,
 .catalog-grid input,
+.catalog-grid textarea,
 .inventory-row input {
   width: 100%;
   min-height: 48px;
@@ -216,6 +217,7 @@ button:disabled {
 .support-form textarea:focus,
 .partner-select select:focus,
 .catalog-grid input:focus,
+.catalog-grid textarea:focus,
 .product-manage-row input:focus,
 .inventory-row input:focus {
   border-color: #1f8f3a;
@@ -225,6 +227,13 @@ button:disabled {
 .support-form textarea {
   min-height: 96px;
   padding-top: 12px;
+  resize: vertical;
+}
+
+.catalog-grid textarea {
+  min-height: 150px;
+  padding-top: 12px;
+  line-height: 1.5;
   resize: vertical;
 }
 
@@ -735,6 +744,24 @@ button:disabled {
   display: grid;
   grid-template-columns: 1.4fr 0.6fr;
   gap: 20px;
+}
+
+.bulk-import-card {
+  grid-column: 1 / -1;
+}
+
+.bulk-import-card p,
+.bulk-result p {
+  margin: 6px 0 0;
+  color: #706851;
+  line-height: 1.55;
+}
+
+.bulk-result {
+  padding: 12px 14px;
+  border: 1px solid #dcebdc;
+  border-radius: 16px;
+  background: #f6fff5;
 }
 
 .form-grid {

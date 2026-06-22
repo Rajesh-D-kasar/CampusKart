@@ -39,7 +39,7 @@ run locally, but structured like a real commerce system.
 - Delivery partner dashboard for assigned deliveries, OTP-verified pickup, live location sharing, doorstep handoff, earnings, and partner support
 - Separate delivery partner website at `delivery-panel/`
 - Separate shop owner website at `shop-owner-panel/` with rider assignment,
-  ready-for-pickup, product editing, and support desk controls
+  ready-for-pickup, product editing, bulk upload, and support desk controls
 - Security headers, trusted-host validation, Dockerfiles, and deployment config
 - One-click Windows run script for local development
 - Backend and frontend test coverage
@@ -237,7 +237,7 @@ VITE_API_URL=https://your-api-domain.example
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
 | Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
-| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `POST /admin/products/bulk`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 ## Development Accounts
 
@@ -408,7 +408,7 @@ blinkit_clone/
 ## Roadmap
 
 - CI workflow and production observability
-- Seller product bulk upload
+- Search suggestions and autocomplete
 
 ## Notes
 

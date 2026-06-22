@@ -167,6 +167,23 @@
         </section>
 
         <section class="catalog-grid">
+          <form class="panel-card bulk-import-card" id="bulk-import-form">
+            <div>
+              <span class="eyebrow">Fast catalog upload</span>
+              <h2>Bulk add products</h2>
+              <p>
+                CSV paste karo: category,name,unit,price,mrp,stock,reorder,slug,image_url.
+                Existing slug mile to product update hoga.
+              </p>
+            </div>
+            <textarea
+              id="bulk-products"
+              placeholder="category,name,unit,price,mrp,stock,reorder,slug,image_url&#10;Bakery,Fresh Bread,1 pack,35,45,20,6,fresh-bread,"
+            ></textarea>
+            <button class="primary-button" type="submit">Import products</button>
+            <div class="bulk-result" id="bulk-result" hidden></div>
+          </form>
+
           <form class="panel-card" id="product-form">
             <div>
               <span class="eyebrow">Naya maal</span>

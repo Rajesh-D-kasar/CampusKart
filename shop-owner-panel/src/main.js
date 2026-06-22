@@ -55,6 +55,9 @@ const el = {
   productPrice: document.querySelector("#product-price"),
   productMrp: document.querySelector("#product-mrp"),
   productStock: document.querySelector("#product-stock"),
+  bulkImportForm: document.querySelector("#bulk-import-form"),
+  bulkProducts: document.querySelector("#bulk-products"),
+  bulkResult: document.querySelector("#bulk-result"),
   categoryForm: document.querySelector("#category-form"),
   categoryName: document.querySelector("#category-name"),
   panelError: document.querySelector("#panel-error"),
@@ -118,6 +121,65 @@ function slugify(value) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function parseCsvLine(line) {
+  const values = [];
+  let current = "";
+  let quoted = false;
+
+  for (const char of line) {
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseBulkProducts(csvText) {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return [];
+
+  const firstLine = lines[0].toLowerCase();
+  const dataLines = firstLine.startsWith("category,") ? lines.slice(1) : lines;
+
+  return dataLines.map((line) => {
+    const [
+      category,
+      name,
+      unit,
+      price,
+      mrp,
+      stock,
+      reorder,
+      slug,
+      imageUrl,
+    ] = parseCsvLine(line);
+    return {
+      category_name: category,
+      name,
+      unit,
+      price: Number(price),
+      mrp: Number(mrp),
+      stock_quantity: Number(stock || 0),
+      reorder_level: Number(reorder || 10),
+      slug: slug || slugify(name),
+      image_url: imageUrl || null,
+      is_active: true,
+    };
+  });
 }
 
 async function apiFetch(path, options = {}) {
@@ -458,6 +520,49 @@ async function createProduct() {
   el.productForm.reset();
   el.productStock.value = "10";
   await loadDashboard();
+}
+
+async function importBulkProducts() {
+  const items = parseBulkProducts(el.bulkProducts.value);
+  if (!items.length) {
+    throw new Error("CSV me kam se kam ek product row honi chahiye.");
+  }
+  const invalid = items.find(
+    (item) =>
+      !item.category_name ||
+      !item.name ||
+      !item.unit ||
+      !Number.isFinite(item.price) ||
+      !Number.isFinite(item.mrp)
+  );
+  if (invalid) {
+    throw new Error("CSV row invalid hai. category, name, unit, price aur mrp required hain.");
+  }
+
+  state.saving = "bulk-import";
+  el.bulkImportForm.querySelector("button").disabled = true;
+  el.bulkResult.hidden = true;
+  try {
+    const result = await apiFetch("/admin/products/bulk", {
+      method: "POST",
+      body: JSON.stringify({ update_existing: true, items }),
+    });
+    el.bulkResult.hidden = false;
+    el.bulkResult.innerHTML = `
+      <strong>${result.created} created, ${result.updated} updated, ${result.skipped} skipped</strong>
+      ${
+        result.errors.length
+          ? `<p>${result.errors
+              .map((error) => `Row ${error.row}: ${escapeHtml(error.error)}`)
+              .join("<br />")}</p>`
+          : "<p>Import successful.</p>"
+      }
+    `;
+    await loadDashboard();
+  } finally {
+    state.saving = "";
+    el.bulkImportForm.querySelector("button").disabled = false;
+  }
 }
 
 async function createCategory() {
@@ -1117,6 +1222,16 @@ el.productForm.addEventListener("submit", async (event) => {
   setError(el.panelError, "");
   try {
     await createProduct();
+  } catch (error) {
+    setError(el.panelError, error.message);
+  }
+});
+
+el.bulkImportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setError(el.panelError, "");
+  try {
+    await importBulkProducts();
   } catch (error) {
     setError(el.panelError, error.message);
   }

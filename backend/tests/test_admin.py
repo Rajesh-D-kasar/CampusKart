@@ -164,6 +164,74 @@ def test_admin_can_create_and_update_product(client, db_session: Session) -> Non
     assert db_inventory.stock_quantity == 4
 
 
+def test_admin_can_bulk_upsert_products(client) -> None:
+    headers = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
+
+    created = client.post(
+        "/admin/products/bulk",
+        json={
+            "items": [
+                {
+                    "category_name": "Bulk Bakery",
+                    "name": "Bulk Bread",
+                    "slug": "bulk-bread",
+                    "unit": "1 pack",
+                    "price": 35,
+                    "mrp": 45,
+                    "stock_quantity": 20,
+                    "reorder_level": 6,
+                },
+                {
+                    "category_name": "Bulk Bakery",
+                    "name": "Bulk Bun",
+                    "slug": "bulk-bun",
+                    "unit": "4 pcs",
+                    "price": 30,
+                    "mrp": 40,
+                    "stock_quantity": 14,
+                },
+            ]
+        },
+        headers=headers,
+    )
+    updated = client.post(
+        "/admin/products/bulk",
+        json={
+            "items": [
+                {
+                    "category_slug": "bulk-bakery",
+                    "name": "Bulk Bread Updated",
+                    "slug": "bulk-bread",
+                    "unit": "1 pack",
+                    "price": 38,
+                    "mrp": 48,
+                    "stock_quantity": 11,
+                },
+                {
+                    "category_slug": "bulk-bakery",
+                    "name": "Bad Price",
+                    "slug": "bad-price",
+                    "unit": "1 pack",
+                    "price": 50,
+                    "mrp": 40,
+                    "stock_quantity": 1,
+                },
+            ]
+        },
+        headers=headers,
+    )
+
+    assert created.status_code == 200
+    assert created.json()["created"] == 2
+    assert created.json()["errors"] == []
+    assert updated.status_code == 200
+    assert updated.json()["updated"] == 1
+    assert updated.json()["errors"][0]["row"] == 2
+    bread = next(item for item in updated.json()["products"] if item["slug"] == "bulk-bread")
+    assert bread["name"] == "Bulk Bread Updated"
+    assert bread["stock_quantity"] == 11
+
+
 def test_inactive_category_hides_public_products(client, db_session: Session) -> None:
     headers = login_headers(client, ADMIN_USER["email"], ADMIN_USER["password"])
     category = client.post(

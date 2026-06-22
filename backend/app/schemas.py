@@ -655,6 +655,42 @@ class AdminProductUpdate(BaseModel):
     reorder_level: int | None = Field(default=None, ge=0)
 
 
+class AdminProductBulkItem(BaseModel):
+    category_id: int | None = None
+    category_slug: str | None = Field(default=None, min_length=2, max_length=120)
+    category_name: str | None = Field(default=None, min_length=2, max_length=100)
+    name: str = Field(min_length=2, max_length=180)
+    slug: str | None = Field(default=None, min_length=2, max_length=200)
+    description: str | None = None
+    unit: str = Field(min_length=1, max_length=80)
+    icon: str = Field(default="", max_length=20)
+    image_url: str | None = Field(default=None, max_length=500)
+    price: float = Field(ge=0)
+    mrp: float = Field(ge=0)
+    stock_quantity: int = Field(default=0, ge=0)
+    reorder_level: int = Field(default=10, ge=0)
+    is_active: bool = True
+
+
+class AdminProductBulkRequest(BaseModel):
+    update_existing: bool = True
+    items: list[AdminProductBulkItem] = Field(min_length=1, max_length=100)
+
+
+class AdminProductBulkErrorOut(BaseModel):
+    row: int = Field(ge=1)
+    name: str | None = None
+    error: str
+
+
+class AdminProductBulkOut(BaseModel):
+    created: int = Field(ge=0)
+    updated: int = Field(ge=0)
+    skipped: int = Field(ge=0)
+    errors: list[AdminProductBulkErrorOut]
+    products: list[AdminProductOut]
+
+
 class SupportTicketCreate(BaseModel):
     audience: Literal["customer", "delivery", "seller"] | None = None
     category: Literal[

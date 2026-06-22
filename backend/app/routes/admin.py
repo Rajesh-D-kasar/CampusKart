@@ -48,6 +48,8 @@ from app.schemas import (
     AdminOrderOut,
     AdminOrderStatusUpdate,
     AdminProductCreate,
+    AdminProductBulkOut,
+    AdminProductBulkRequest,
     AdminProductOut,
     AdminProductUpdate,
     AdminSettlementReportOut,
@@ -736,6 +738,147 @@ def create_product(
     )
     assert saved_product is not None
     return serialize_admin_product(saved_product, store.id)
+
+
+def category_for_bulk_item(item, db: Session) -> Category:
+    if item.category_id is not None:
+        category = db.get(Category, item.category_id)
+        if category is None:
+            raise ValueError("Category not found")
+        return category
+
+    category_slug = slugify(item.category_slug or item.category_name or "")
+    if not category_slug:
+        raise ValueError("category_id, category_slug, or category_name is required")
+
+    category = db.scalar(select(Category).where(Category.slug == category_slug))
+    if category is not None:
+        return category
+
+    category_name = (
+        item.category_name.strip()
+        if item.category_name
+        else category_slug.replace("-", " ").title()
+    )
+    category = Category(name=category_name, slug=category_slug, is_active=True)
+    db.add(category)
+    db.flush()
+    return category
+
+
+def apply_bulk_product_item(
+    product: Product,
+    item,
+    category: Category,
+    price_paise: int,
+    mrp_paise: int,
+) -> None:
+    product.category_id = category.id
+    product.name = item.name.strip()
+    product.description = item.description
+    product.unit = item.unit.strip()
+    product.icon = item.icon
+    product.image_url = item.image_url or None
+    product.price_paise = price_paise
+    product.mrp_paise = mrp_paise
+    product.is_active = item.is_active
+
+
+@router.post("/products/bulk", response_model=AdminProductBulkOut)
+def bulk_upsert_products(
+    payload: AdminProductBulkRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    store = get_active_store(db)
+    created = 0
+    updated = 0
+    skipped = 0
+    errors: list[dict] = []
+    affected_product_ids: list[int] = []
+
+    for row, item in enumerate(payload.items, start=1):
+        try:
+            price_paise = rupees_to_paise(item.price)
+            mrp_paise = rupees_to_paise(item.mrp)
+            validate_product_prices(price_paise, mrp_paise)
+            category = category_for_bulk_item(item, db)
+            product_slug = slugify(item.slug or item.name)
+            product = db.scalar(
+                select(Product)
+                .options(*product_options())
+                .where(Product.slug == product_slug)
+            )
+
+            if product is not None and not payload.update_existing:
+                skipped += 1
+                continue
+
+            existing_inventory = (
+                inventory_for_product(product, store.id)
+                if product is not None
+                else None
+            )
+            if (
+                existing_inventory is not None
+                and item.stock_quantity < existing_inventory.reserved_quantity
+            ):
+                raise ValueError("Stock cannot be below reserved quantity")
+
+            if product is None:
+                product = Product(slug=product_slug)
+                apply_bulk_product_item(
+                    product,
+                    item,
+                    category,
+                    price_paise,
+                    mrp_paise,
+                )
+                db.add(product)
+                db.flush()
+                created += 1
+            else:
+                apply_bulk_product_item(
+                    product,
+                    item,
+                    category,
+                    price_paise,
+                    mrp_paise,
+                )
+                updated += 1
+
+            inventory = existing_inventory or inventory_for_product(product, store.id)
+            if inventory is None:
+                inventory = Inventory(store_id=store.id, product_id=product.id)
+                db.add(inventory)
+                product.inventory_items.append(inventory)
+
+            inventory.stock_quantity = item.stock_quantity
+            inventory.reorder_level = item.reorder_level
+            affected_product_ids.append(product.id)
+        except HTTPException as error:
+            errors.append({"row": row, "name": item.name, "error": str(error.detail)})
+        except ValueError as error:
+            errors.append({"row": row, "name": item.name, "error": str(error)})
+
+    db.commit()
+    products = []
+    if affected_product_ids:
+        saved_products = db.scalars(
+            select(Product)
+            .options(*product_options())
+            .where(Product.id.in_(affected_product_ids))
+            .order_by(Product.name)
+        ).all()
+        products = [serialize_admin_product(product, store.id) for product in saved_products]
+
+    return {
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "errors": errors,
+        "products": products,
+    }
 
 
 @router.patch("/products/{product_id}", response_model=AdminProductOut)
