@@ -364,6 +364,28 @@ class DeliverySummaryOut(BaseModel):
     delivered_value: float = Field(ge=0)
 
 
+class DeliveryEarningOrderOut(BaseModel):
+    order_id: int
+    order_number: str
+    status: str
+    total: float = Field(ge=0)
+    earning: float = Field(ge=0)
+    cod_collected: float = Field(ge=0)
+    delivery_rating: int | None = Field(default=None, ge=1, le=5)
+    delivered_at: datetime | None = None
+
+
+class DeliveryEarningsOut(BaseModel):
+    active_orders: int = Field(ge=0)
+    completed_orders: int = Field(ge=0)
+    delivered_value: float = Field(ge=0)
+    cod_pending: float = Field(ge=0)
+    cod_collected: float = Field(ge=0)
+    estimated_earnings: float = Field(ge=0)
+    average_delivery_rating: float | None = None
+    recent_deliveries: list[DeliveryEarningOrderOut]
+
+
 class PaymentTransactionOut(BaseModel):
     id: int
     order_id: int | None

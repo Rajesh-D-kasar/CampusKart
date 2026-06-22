@@ -36,7 +36,7 @@ run locally, but structured like a real commerce system.
 - Admin dashboard for order status, category management, product editing, and
   inventory controls
 - Admin analytics for revenue, average order value, payment mix, and top products
-- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, live location sharing, doorstep handoff, and partner support
+- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, live location sharing, doorstep handoff, earnings, and partner support
 - Separate delivery partner website at `delivery-panel/`
 - Separate shop owner website at `shop-owner-panel/` with rider assignment,
   ready-for-pickup, product editing, and support desk controls
@@ -233,7 +233,7 @@ VITE_API_URL=https://your-api-domain.example
 | Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
 | Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/review`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
-| Delivery | `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
+| Delivery | `GET /delivery/summary`, `GET /delivery/earnings`, `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
 | Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
@@ -408,7 +408,7 @@ blinkit_clone/
 ## Roadmap
 
 - CI workflow and production observability
-- Delivery partner earnings and COD reconciliation
+- Seller product bulk upload
 
 ## Notes
 

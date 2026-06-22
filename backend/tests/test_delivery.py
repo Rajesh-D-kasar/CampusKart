@@ -109,6 +109,7 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
 
     listed = client.get("/delivery/orders", headers=headers)
     summary_before = client.get("/delivery/summary", headers=headers)
+    earnings_before = client.get("/delivery/earnings", headers=headers)
     out_for_delivery = client.patch(
         f"/delivery/orders/{order.id}/status",
         json={"status": "out_for_delivery", "otp": pickup_otp},
@@ -130,7 +131,19 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
         json={"status": "delivered", "otp": customer_otp},
         headers=headers,
     )
+    review = client.put(
+        f"/orders/{order.id}/review",
+        json={
+            "overall_rating": 5,
+            "product_rating": 5,
+            "delivery_rating": 4,
+            "seller_rating": 5,
+            "comment": "Smooth delivery.",
+        },
+        headers=customer,
+    )
     summary_after = client.get("/delivery/summary", headers=headers)
+    earnings_after = client.get("/delivery/earnings", headers=headers)
     db_session.refresh(order)
 
     assert listed.status_code == 200
@@ -138,6 +151,8 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
     assert summary_before.status_code == 200
     assert summary_before.json()["active_orders"] == 1
     assert summary_before.json()["cod_collection_due"] == listed.json()[0]["total"]
+    assert earnings_before.status_code == 200
+    assert earnings_before.json()["estimated_earnings"] == 0
     assert out_for_delivery.json()["status"] == "out_for_delivery"
     assert out_for_delivery.json()["pickup_verified"] is True
     assert out_for_delivery.json()["dropoff_verified"] is False
@@ -148,9 +163,15 @@ def test_delivery_partner_can_list_and_complete_assigned_order(
     assert delivered.json()["dropoff_verified"] is True
     assert delivered.json()["customer_name"] == "Delivery Test Customer"
     assert delivered.json()["delivery_partner"]["phone"].startswith("+91")
+    assert review.status_code == 200
     assert summary_after.json()["active_orders"] == 0
     assert summary_after.json()["delivered_orders"] == 1
     assert summary_after.json()["cod_collection_due"] == 0
+    assert earnings_after.json()["completed_orders"] == 1
+    assert earnings_after.json()["cod_collected"] == delivered.json()["total"]
+    assert earnings_after.json()["estimated_earnings"] == 35
+    assert earnings_after.json()["average_delivery_rating"] == 4
+    assert earnings_after.json()["recent_deliveries"][0]["delivery_rating"] == 4
     assert order.payment_status == PaymentStatus.PAID
 
 
@@ -201,10 +222,12 @@ def test_delivery_routes_reject_customers(client) -> None:
 
     response = client.get("/delivery/orders", headers=headers)
     summary = client.get("/delivery/summary", headers=headers)
+    earnings = client.get("/delivery/earnings", headers=headers)
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Delivery partner access required"
     assert summary.status_code == 403
+    assert earnings.status_code == 403
 
 
 def test_delivery_partner_cannot_access_unassigned_order(

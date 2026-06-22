@@ -339,6 +339,86 @@ a {
   letter-spacing: -0.06em;
 }
 
+.earnings-card {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid rgb(26 59 29 / 9%);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgb(255 184 77 / 12%), transparent),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.earnings-head,
+.earnings-list article {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.earnings-head h2,
+.earnings-head p {
+  margin: 0;
+}
+
+.earnings-head p {
+  color: #61705f;
+  line-height: 1.55;
+}
+
+.earnings-head > strong {
+  min-width: max-content;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: -0.07em;
+}
+
+.earnings-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.earnings-grid article {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e8efe3;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 78%);
+}
+
+.earnings-grid span,
+.earnings-list small {
+  color: #62705f;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.earnings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.earnings-list article {
+  padding: 13px;
+  border: 1px solid #edf1e9;
+  border-radius: 16px;
+  background: #fbfdf9;
+}
+
+.earnings-list div {
+  display: grid;
+  gap: 4px;
+}
+
+.earnings-list div:last-child {
+  justify-items: end;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -733,6 +813,10 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .earnings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .toolbar {
     grid-template-columns: 1fr;
   }
@@ -757,7 +841,9 @@ a {
 
   .panel-header,
   .shift-card,
-  .order-head {
+  .order-head,
+  .earnings-head,
+  .earnings-list article {
     align-items: stretch;
     flex-direction: column;
   }
@@ -775,6 +861,7 @@ a {
   }
 
   .stats-grid,
+  .earnings-grid,
   .info-grid,
   .support-form,
   .handoff-card {

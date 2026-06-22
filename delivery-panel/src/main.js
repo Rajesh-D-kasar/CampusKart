@@ -12,6 +12,7 @@ const state = {
   user: loadStoredUser(),
   orders: [],
   summary: null,
+  earnings: null,
   supportTickets: [],
   tab: "active",
   query: "",
@@ -30,6 +31,9 @@ const elements = {
   lastRefresh: document.querySelector("#last-refresh"),
   codDue: document.querySelector("#cod-due"),
   statsGrid: document.querySelector("#stats-grid"),
+  earningsTotal: document.querySelector("#earnings-total"),
+  earningsGrid: document.querySelector("#earnings-grid"),
+  earningsList: document.querySelector("#earnings-list"),
   tabs: document.querySelector("#tabs"),
   searchInput: document.querySelector("#search-input"),
   panelError: document.querySelector("#panel-error"),
@@ -164,6 +168,7 @@ function logout() {
   state.user = null;
   state.orders = [];
   state.summary = null;
+  state.earnings = null;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   renderShell();
@@ -190,12 +195,14 @@ async function loadDashboard() {
   elements.refreshButton.disabled = true;
 
   try {
-    const [summary, orders, supportTickets] = await Promise.all([
+    const [summary, earnings, orders, supportTickets] = await Promise.all([
       apiFetch("/delivery/summary"),
+      apiFetch("/delivery/earnings"),
       apiFetch("/delivery/orders"),
       apiFetch("/support/tickets"),
     ]);
     state.summary = summary;
+    state.earnings = earnings;
     state.orders = orders;
     state.supportTickets = supportTickets;
     elements.lastRefresh.textContent = `Last synced ${formatDateTime(
@@ -346,6 +353,63 @@ function renderStats() {
         <article class="stat-card">
           <span>${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderEarnings() {
+  const earnings = state.earnings || {
+    active_orders: 0,
+    completed_orders: 0,
+    delivered_value: 0,
+    cod_pending: 0,
+    cod_collected: 0,
+    estimated_earnings: 0,
+    average_delivery_rating: null,
+    recent_deliveries: [],
+  };
+
+  elements.earningsTotal.textContent = formatMoney(earnings.estimated_earnings);
+  elements.earningsGrid.innerHTML = [
+    ["Completed", earnings.completed_orders],
+    ["COD collected", formatMoney(earnings.cod_collected)],
+    ["COD pending", formatMoney(earnings.cod_pending)],
+    [
+      "Rating",
+      earnings.average_delivery_rating == null
+        ? "No rating yet"
+        : `${earnings.average_delivery_rating}/5`,
+    ],
+  ]
+    .map(
+      ([label, value]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </article>
+      `
+    )
+    .join("");
+
+  if (!earnings.recent_deliveries.length) {
+    elements.earningsList.innerHTML = `<div class="quiet-card">Delivered orders ke baad payout history yahan dikhegi.</div>`;
+    return;
+  }
+
+  elements.earningsList.innerHTML = earnings.recent_deliveries
+    .map(
+      (delivery) => `
+        <article>
+          <div>
+            <strong>#${escapeHtml(delivery.order_number)}</strong>
+            <small>${formatDateTime(delivery.delivered_at)} - ${escapeHtml(formatStatus(delivery.status))}</small>
+          </div>
+          <div>
+            <strong>${formatMoney(delivery.earning)}</strong>
+            <small>COD ${formatMoney(delivery.cod_collected)}</small>
+          </div>
         </article>
       `
     )
@@ -598,6 +662,7 @@ function renderOrderCard(order) {
 function renderDashboard() {
   renderShell();
   renderStats();
+  renderEarnings();
   renderTabs();
   renderOrders();
   renderSupportTickets();

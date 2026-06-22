@@ -19,10 +19,12 @@ from app.order_ops import (
     latest_delivery_location,
     serialize_delivery_location,
     serialize_order_item,
+    serialize_order_review,
 )
 from app.schemas import (
     DeliveryLocationOut,
     DeliveryLocationUpdate,
+    DeliveryEarningsOut,
     DeliveryOrderOut,
     DeliveryOrderStatusUpdate,
     DeliverySummaryOut,
@@ -45,6 +47,9 @@ ALLOWED_TRANSITIONS = {
     OrderStatus.DELIVERED: {OrderStatus.DELIVERED},
 }
 
+DELIVERY_BASE_EARNING_PAISE = 3000
+COD_HANDLING_BONUS_PAISE = 500
+
 
 def paise_to_rupees(value: int) -> float:
     return value / 100
@@ -60,6 +65,7 @@ def order_options():
         selectinload(Order.user),
         selectinload(Order.assigned_delivery_partner),
         selectinload(Order.delivery_locations),
+        selectinload(Order.review),
     )
 
 
@@ -85,6 +91,7 @@ def serialize_delivery_order(order: Order, db: Session) -> dict:
         "total": paise_to_rupees(order.total_paise),
         **tracking_detail(order),
         "delivery_location": serialize_delivery_location(latest_delivery_location(order)),
+        "review": serialize_order_review(order.review),
         "created_at": order.created_at,
         "address_id": order.address_id,
         "delivery_address_snapshot": snapshot,
@@ -101,9 +108,92 @@ def serialize_delivery_order(order: Order, db: Session) -> dict:
     }
 
 
+def earning_for_order(order: Order) -> int:
+    if order.status != OrderStatus.DELIVERED:
+        return 0
+    cod_bonus = (
+        COD_HANDLING_BONUS_PAISE
+        if order.payment_method == "cash_on_delivery"
+        else 0
+    )
+    return DELIVERY_BASE_EARNING_PAISE + cod_bonus
+
+
+def serialize_earning_order(order: Order) -> dict:
+    cod_collected = (
+        order.total_paise
+        if order.status == OrderStatus.DELIVERED
+        and order.payment_method == "cash_on_delivery"
+        and order.payment_status == PaymentStatus.PAID
+        else 0
+    )
+    return {
+        "order_id": order.id,
+        "order_number": order.order_number,
+        "status": enum_value(order.status),
+        "total": paise_to_rupees(order.total_paise),
+        "earning": paise_to_rupees(earning_for_order(order)),
+        "cod_collected": paise_to_rupees(cod_collected),
+        "delivery_rating": (
+            order.review.delivery_rating
+            if order.review is not None
+            else None
+        ),
+        "delivered_at": order.updated_at if order.status == OrderStatus.DELIVERED else None,
+    }
+
+
+def serialize_delivery_earnings(orders: list[Order]) -> dict:
+    delivered_orders = [
+        order for order in orders if order.status == OrderStatus.DELIVERED
+    ]
+    ratings = [
+        order.review.delivery_rating
+        for order in delivered_orders
+        if order.review is not None
+    ]
+    cod_pending = sum(
+        order.total_paise
+        for order in orders
+        if order.payment_method == "cash_on_delivery"
+        and order.payment_status == PaymentStatus.PENDING
+        and order.status != OrderStatus.DELIVERED
+    )
+    cod_collected = sum(
+        order.total_paise
+        for order in delivered_orders
+        if order.payment_method == "cash_on_delivery"
+        and order.payment_status == PaymentStatus.PAID
+    )
+    return {
+        "active_orders": sum(1 for order in orders if order.status != OrderStatus.DELIVERED),
+        "completed_orders": len(delivered_orders),
+        "delivered_value": paise_to_rupees(
+            sum(order.total_paise for order in delivered_orders)
+        ),
+        "cod_pending": paise_to_rupees(cod_pending),
+        "cod_collected": paise_to_rupees(cod_collected),
+        "estimated_earnings": paise_to_rupees(
+            sum(earning_for_order(order) for order in delivered_orders)
+        ),
+        "average_delivery_rating": (
+            round(sum(ratings) / len(ratings), 2) if ratings else None
+        ),
+        "recent_deliveries": [
+            serialize_earning_order(order)
+            for order in sorted(
+                delivered_orders,
+                key=lambda item: item.updated_at,
+                reverse=True,
+            )[:8]
+        ],
+    }
+
+
 def get_accessible_order(order_id: int, current_user: User, db: Session) -> Order:
     order = db.scalar(
         select(Order).options(*order_options()).where(Order.id == order_id)
+        .execution_options(populate_existing=True)
     )
     if order is None or not can_access_order(order, current_user):
         raise HTTPException(status_code=404, detail="Delivery order not found")
@@ -116,6 +206,7 @@ def list_accessible_delivery_orders(current_user: User, db: Session) -> list[Ord
         .options(*order_options())
         .where(Order.status.in_(VISIBLE_STATUSES))
         .order_by(Order.created_at.desc(), Order.id.desc())
+        .execution_options(populate_existing=True)
     ).all()
     return [order for order in orders if can_access_order(order, current_user)]
 
@@ -161,6 +252,14 @@ def read_delivery_summary(
     db: Session = Depends(get_db),
 ) -> dict:
     return serialize_delivery_summary(list_accessible_delivery_orders(current_user, db))
+
+
+@router.get("/earnings", response_model=DeliveryEarningsOut)
+def read_delivery_earnings(
+    current_user: User = Depends(require_delivery_partner),
+    db: Session = Depends(get_db),
+) -> dict:
+    return serialize_delivery_earnings(list_accessible_delivery_orders(current_user, db))
 
 
 @router.get("/orders", response_model=list[DeliveryOrderOut])
