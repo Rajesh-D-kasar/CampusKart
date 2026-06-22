@@ -29,6 +29,7 @@ run locally, but structured like a real commerce system.
 - Razorpay payment order, checkout verification, webhook reconciliation, and payment history
 - Admin-triggered Razorpay refund execution for paid gateway orders
 - Refund status sync, payment transaction history, and settlement summary
+- Dedicated product detail pages with related product recommendations
 - Store-level inventory and stock reservation during checkout
 - My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
 - Admin dashboard for order status, category management, product editing, and
@@ -136,8 +137,8 @@ Then open:
 ## Core User Flow
 
 1. Browse grocery products.
-2. Search or filter by category.
-3. Add products to cart.
+2. Search, filter by category, or open a product detail page.
+3. Add products or recommended related items to cart.
 4. Register or login.
 5. Cart syncs to the backend account.
 6. Add or select a delivery address.
@@ -224,7 +225,7 @@ VITE_API_URL=https://your-api-domain.example
 | Area | Endpoints |
 | --- | --- |
 | Health | `GET /health`, `GET /health/database` |
-| Products | `GET /products`, `GET /products/categories`, `GET /products/{id}` |
+| Products | `GET /products`, `GET /products/categories`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
 | Offers | `GET /offers`, `POST /offers/coupons/preview` |
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
 | OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
@@ -405,9 +406,8 @@ blinkit_clone/
 
 ## Roadmap
 
-- Dedicated product detail pages and recommendations
-- Partial refunds, refund status polling, and settlement reports
 - CI workflow and production observability
+- Order rating/review workflow after delivery
 
 ## Notes
 

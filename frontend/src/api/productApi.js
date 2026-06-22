@@ -5,6 +5,16 @@ export const getProducts = async (params = {}) => {
   return response.data;
 };
 
+export const getProduct = async (productId) => {
+  const response = await API.get(`/products/${productId}`);
+  return response.data;
+};
+
+export const getProductRecommendations = async (productId) => {
+  const response = await API.get(`/products/${productId}/recommendations`);
+  return response.data;
+};
+
 export const getCategories = async () => {
   const response = await API.get("/products/categories");
   return response.data;

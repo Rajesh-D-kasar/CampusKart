@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import MyOrders from "./pages/MyOrders";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
 import Support from "./pages/Support";
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:productId" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<AdminDashboard />} />

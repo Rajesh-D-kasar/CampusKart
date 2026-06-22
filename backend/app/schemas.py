@@ -10,6 +10,7 @@ class ProductOut(BaseModel):
     id: int
     name: str
     slug: str
+    description: str | None = None
     price: float = Field(ge=0)
     mrp: float = Field(ge=0)
     category: str = Field(validation_alias="category_name")

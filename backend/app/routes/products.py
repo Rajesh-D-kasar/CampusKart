@@ -83,6 +83,50 @@ def list_categories(db: Session = Depends(get_db)) -> list[dict[str, int | str |
     ]
 
 
+@router.get("/{product_id}/recommendations", response_model=list[ProductOut])
+def get_product_recommendations(
+    product_id: int,
+    limit: int = Query(default=8, ge=1, le=12),
+    db: Session = Depends(get_db),
+) -> list[Product]:
+    product = db.scalar(product_query().where(Product.id == product_id))
+    if product is None or not product.is_active or not product.category.is_active:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    base_filters = (
+        Product.id != product.id,
+        Product.is_active.is_(True),
+        Product.category.has(Category.is_active.is_(True)),
+    )
+    discount_expression = func.coalesce(
+        (Product.mrp_paise - Product.price_paise)
+        * 100.0
+        / func.nullif(Product.mrp_paise, 0),
+        0,
+    )
+    same_category = list(
+        db.scalars(
+            product_query()
+            .where(*base_filters, Product.category_id == product.category_id)
+            .order_by(discount_expression.desc(), Product.name)
+            .limit(limit)
+        ).all()
+    )
+    if len(same_category) >= limit:
+        return same_category
+
+    selected_ids = {item.id for item in same_category}
+    fallback = list(
+        db.scalars(
+            product_query()
+            .where(*base_filters, Product.id.not_in(selected_ids))
+            .order_by(discount_expression.desc(), Product.name)
+            .limit(limit - len(same_category))
+        ).all()
+    )
+    return [*same_category, *fallback]
+
+
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: int, db: Session = Depends(get_db)) -> Product:
     product = db.scalar(product_query().where(Product.id == product_id))

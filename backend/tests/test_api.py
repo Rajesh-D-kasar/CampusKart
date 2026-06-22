@@ -64,3 +64,29 @@ def test_get_product_returns_404_for_unknown_id(client) -> None:
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Product not found"}
+
+
+def test_product_recommendations_prioritize_related_items(client) -> None:
+    products = client.get("/products").json()
+    product = products[0]
+    response = client.get(f"/products/{product['id']}/recommendations")
+    recommendations = response.json()
+
+    assert response.status_code == 200
+    assert 1 <= len(recommendations) <= 8
+    assert product["id"] not in {item["id"] for item in recommendations}
+    same_category_products = [
+        item
+        for item in products
+        if item["id"] != product["id"]
+        and item["category_slug"] == product["category_slug"]
+    ]
+    if same_category_products:
+        assert recommendations[0]["category_slug"] == product["category_slug"]
+
+
+def test_product_recommendations_return_404_for_unknown_id(client) -> None:
+    response = client.get("/products/999/recommendations")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Product not found"}
