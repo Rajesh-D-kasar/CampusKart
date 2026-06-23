@@ -23,9 +23,11 @@ This repository contains four connected surfaces:
 
 - [Why This Project Stands Out](#why-this-project-stands-out)
 - [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
 - [Local URLs](#local-urls)
 - [One-Click Run](#one-click-run)
 - [Manual Setup](#manual-setup)
+- [Common Run Issues](#common-run-issues)
 - [Core User Flow](#core-user-flow)
 - [Feature Matrix](#feature-matrix)
 - [Architecture](#architecture)
@@ -73,6 +75,25 @@ This repository contains four connected surfaces:
 
 For production setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Prerequisites
+
+Install these before running the project locally:
+
+- Windows 10/11 with PowerShell
+- Python 3.12
+- Node.js 20 or newer
+- Git
+- Docker Desktop, only if you want PostgreSQL or Docker Compose
+
+Check versions:
+
+```powershell
+python --version
+node --version
+npm --version
+git --version
+```
+
 ## Local URLs
 
 | Surface | URL |
@@ -86,16 +107,31 @@ For production setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## One-Click Run
 
-On Windows, double-click:
+This is the recommended way to run the full project locally.
 
-```text
-run-dev.bat
+1. Open PowerShell.
+2. Go to the project folder:
+
+```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 ```
 
-Or run from PowerShell:
+3. Start everything:
 
 ```powershell
 .\run-dev.ps1
+```
+
+If PowerShell blocks the script, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
+```
+
+You can also double-click:
+
+```text
+run-dev.bat
 ```
 
 The script will:
@@ -108,18 +144,35 @@ The script will:
 - start backend, customer app, delivery panel, and shop owner panel
 - open the customer app in the browser
 
+First run may take a few minutes because dependencies are installed. After the
+servers start, open:
+
+```text
+Customer app:         http://127.0.0.1:5173
+Delivery panel:       http://127.0.0.1:5174
+Shop owner panel:     http://127.0.0.1:5175
+Backend API docs:     http://127.0.0.1:8000/docs
+```
+
+To stop the app, press `Ctrl+C` in the running terminals or close the terminal
+windows. To start again, run `.\run-dev.ps1` from the project folder.
+
 ## Manual Setup
+
+Use this method if you want to run each service in a separate terminal.
 
 ### Backend
 
+Open Terminal 1:
+
 ```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd backend
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements-dev.txt
-python -m alembic upgrade head
-python -m app.seed
-uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m app.seed
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
 The default local setup uses SQLite. For PostgreSQL development, copy
@@ -131,26 +184,35 @@ docker compose up -d database
 
 ### Customer Frontend
 
+Open Terminal 2:
+
 ```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd frontend
-npm install
-npm run dev
+npm.cmd install
+npm.cmd run dev
 ```
 
 ### Delivery Partner Panel
 
+Open Terminal 3:
+
 ```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd delivery-panel
-npm install
-npm run dev -- --port 5174
+npm.cmd install
+npm.cmd run dev -- --port 5174
 ```
 
 ### Shop Owner Panel
 
+Open Terminal 4:
+
 ```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd shop-owner-panel
-npm install
-npm run dev -- --port 5175
+npm.cmd install
+npm.cmd run dev -- --port 5175
 ```
 
 ### Docker Compose
@@ -160,6 +222,49 @@ docker compose up --build
 ```
 
 Then open the URLs listed in [Local URLs](#local-urls).
+
+## Common Run Issues
+
+### `npm.ps1 cannot be loaded`
+
+PowerShell may block `npm` scripts. Use `npm.cmd` instead:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+```
+
+### `run-dev.ps1 cannot be loaded`
+
+Run the script with a temporary execution-policy bypass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
+```
+
+### Port already in use
+
+Default ports are:
+
+```text
+Backend:          8000
+Customer app:     5173
+Delivery panel:   5174
+Shop owner panel: 5175
+```
+
+Close the old terminal running the app, then run `.\run-dev.ps1` again.
+
+### Fresh local database
+
+For a clean local dev database, stop the backend, remove `backend/dev.db`, then
+run:
+
+```powershell
+cd C:\Users\ASUS\Documents\Codex\blinkit_clone\backend
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m app.seed
+```
 
 ## Core User Flow
 
