@@ -1,65 +1,88 @@
 # CampusKart
 
-CampusKart is a Blinkit-inspired quick-commerce web app built with React,
-FastAPI, SQLAlchemy, and Alembic. It supports browsing a seeded grocery catalog,
-authentication, server-side cart sync, delivery addresses, checkout, coupons,
-mock payments, Razorpay checkout, ETA-based delivery tracking, delivery partner
-operations, and admin catalog/fulfillment controls.
+CampusKart is a Blinkit-inspired quick-commerce platform built with React,
+FastAPI, SQLAlchemy, and Alembic. It is designed as a realistic learning project
+for grocery ordering, store operations, delivery handoff, payments, support, and
+admin workflows.
 
-The project is designed as a practical full-stack learning app: simple enough to
-run locally, but structured like a real commerce system.
+This repository contains four connected surfaces:
 
-## Highlights
+- Customer web app for browsing, cart, checkout, orders, wallet, support, and
+  tracking.
+- Delivery partner website for assigned deliveries, pickup OTP, route updates,
+  doorstep OTP, earnings, and support.
+- Shop owner website for order packing, rider assignment, pickup OTP, inventory,
+  product management, refunds, settlements, and support.
+- FastAPI backend that powers authentication, catalog, cart, orders, payments,
+  notifications, support, delivery operations, wallet credits, and admin APIs.
 
-- Responsive React app with category browsing, product search, cart, checkout,
-  and order pages
-- Promo banners, coupons, deal collections, and quick product filters
-- FastAPI backend with typed Pydantic schemas
-- SQLAlchemy 2 models for users, addresses, stores, products, inventory, carts,
-  orders, and order items
-- Alembic migrations for database schema management
-- JWT authentication with password hashing
-- Customer OTP login with expiry, resend cooldown, attempt limits, and optional SMTP delivery
-- Secure order handoff OTPs: shop pickup OTP plus separate customer delivery OTP
-- Real delivery partner assignment with shop-owner reassignment controls
-- Customer, delivery partner, and seller support tickets with reply threads
-- Guest cart in browser storage and authenticated cart sync after login
-- Address CRUD for checkout
-- Cash-on-delivery, mock UPI/card, and Razorpay checkout flows
-- Razorpay payment order, checkout verification, webhook reconciliation, and payment history
-- Admin-triggered Razorpay refund execution for paid gateway orders
-- Refund status sync, payment transaction history, and settlement summary
-- Customer wallet page with refund-credit balance and transaction history
-- Dedicated product detail pages with related product recommendations
-- Search suggestions with product/category autocomplete
-- Delivered-order ratings and review tags for customer feedback
-- Store-level inventory and stock reservation during checkout
-- My Orders page with ETA, notifications, delivery partner, invoice, cancellation, and timeline tracking
-- Admin dashboard for order status, category management, product editing, and
-  inventory controls
-- Admin analytics for revenue, average order value, payment mix, and top products
-- Delivery partner dashboard for assigned deliveries, OTP-verified pickup, live location sharing, doorstep handoff, earnings, and partner support
-- Separate delivery partner website at `delivery-panel/`
-- Separate shop owner website at `shop-owner-panel/` with rider assignment,
-  ready-for-pickup, product editing, bulk upload, and support desk controls
-- Security headers, trusted-host validation, Dockerfiles, and deployment config
-- One-click Windows run script for local development
-- Backend and frontend test coverage
+> This is a learning project. It is not affiliated with Blinkit, DummyJSON, or
+> any real quick-commerce brand.
+
+## Table Of Contents
+
+- [Why This Project Stands Out](#why-this-project-stands-out)
+- [Tech Stack](#tech-stack)
+- [Local URLs](#local-urls)
+- [One-Click Run](#one-click-run)
+- [Manual Setup](#manual-setup)
+- [Core User Flow](#core-user-flow)
+- [Feature Matrix](#feature-matrix)
+- [Architecture](#architecture)
+- [API Overview](#api-overview)
+- [Development Accounts](#development-accounts)
+- [Payments And Wallet](#payments-and-wallet)
+- [OTP Security](#otp-security)
+- [Test Data](#test-data)
+- [Verification](#verification)
+- [Project Structure](#project-structure)
+- [Roadmap](#roadmap)
+
+## Why This Project Stands Out
+
+- Full quick-commerce flow from product discovery to OTP-verified delivery.
+- Separate customer, delivery partner, and shop owner experiences connected to
+  one backend.
+- Practical local-store workflow: packing list, rider assignment, pickup OTP,
+  substitutions, unavailable-item marking, refunds, and stock management.
+- Customer safety flow with two different OTPs: one for store-to-rider pickup
+  and one for rider-to-customer delivery.
+- Payment stack with COD, mock UPI/card, Razorpay order creation, checkout
+  verification, webhook reconciliation, refunds, payment history, settlements,
+  and wallet refund credits.
+- Support desk for customer, seller, and delivery partner issues with reply
+  threads.
+- Production-minded foundations: migrations, Dockerfiles, security headers,
+  trusted-host validation, deployment config, and tests.
 
 ## Tech Stack
 
 | Layer | Tools |
 | --- | --- |
-| Frontend | React 19, Vite, React Router, Axios |
+| Customer frontend | React 19, Vite, React Router, Axios |
+| Delivery panel | React 19, Vite, Axios |
+| Shop owner panel | React 19, Vite, Axios |
 | Backend | FastAPI, SQLAlchemy 2, Pydantic, Uvicorn |
-| Database | SQLite for one-click local run, PostgreSQL-ready via Docker Compose |
+| Database | SQLite for local run, PostgreSQL-ready through Docker Compose |
 | Migrations | Alembic |
 | Auth | JWT, Argon2 password hashing |
 | OTP | Hashed email OTP, SMTP-ready delivery, dev-mode test code |
-| Tests | Pytest, Node test runner |
+| Payments | Razorpay-ready APIs plus local mock payments |
+| Tests | Pytest, Node test runner, Vite build |
 | Deployment | Docker, Nginx static frontend, Render/Vercel-ready config |
 
 For production setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Local URLs
+
+| Surface | URL |
+| --- | --- |
+| Customer app | `http://127.0.0.1:5173` |
+| Delivery partner panel | `http://127.0.0.1:5174` |
+| Shop owner panel | `http://127.0.0.1:5175` |
+| Backend API | `http://127.0.0.1:8000` |
+| API docs | `http://127.0.0.1:8000/docs` |
+| Database health | `http://127.0.0.1:8000/health/database` |
 
 ## One-Click Run
 
@@ -69,23 +92,21 @@ On Windows, double-click:
 run-dev.bat
 ```
 
-It will:
+Or run from PowerShell:
 
-- prepare the backend virtual environment if needed
-- apply database migrations
-- seed the development catalog
-- install frontend dependencies if needed
-- start backend and frontend servers
-- open the app at `http://127.0.0.1:5173`
+```powershell
+.\run-dev.ps1
+```
 
-Useful local URLs:
+The script will:
 
-- App: `http://127.0.0.1:5173`
-- Delivery panel: `http://127.0.0.1:5174`
-- Shop owner panel: `http://127.0.0.1:5175`
-- Backend API: `http://127.0.0.1:8000`
-- API docs: `http://127.0.0.1:8000/docs`
-- Database health: `http://127.0.0.1:8000/health/database`
+- create or reuse the backend virtual environment
+- install backend dependencies when needed
+- apply Alembic migrations
+- seed the development catalog and demo accounts
+- install frontend dependencies when needed
+- start backend, customer app, delivery panel, and shop owner panel
+- open the customer app in the browser
 
 ## Manual Setup
 
@@ -101,18 +122,14 @@ python -m app.seed
 uvicorn app.main:app --reload
 ```
 
-The one-click flow uses SQLite by default. For PostgreSQL development, copy
+The default local setup uses SQLite. For PostgreSQL development, copy
 `backend/.env.example` to `backend/.env`, start Docker, then run:
 
 ```powershell
 docker compose up -d database
 ```
 
-See [backend/README.md](backend/README.md) for backend-specific details.
-
-### Frontend
-
-Open a second terminal:
+### Customer Frontend
 
 ```powershell
 cd frontend
@@ -120,108 +137,82 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`.
+### Delivery Partner Panel
+
+```powershell
+cd delivery-panel
+npm install
+npm run dev -- --port 5174
+```
+
+### Shop Owner Panel
+
+```powershell
+cd shop-owner-panel
+npm install
+npm run dev -- --port 5175
+```
 
 ### Docker Compose
-
-To run the database, API, and frontend with Docker:
 
 ```powershell
 docker compose up --build
 ```
 
-Then open:
-
-- App: `http://127.0.0.1:5173`
-- Delivery panel: `http://127.0.0.1:5174`
-- Shop owner panel: `http://127.0.0.1:5175`
-- API docs: `http://127.0.0.1:8000/docs`
+Then open the URLs listed in [Local URLs](#local-urls).
 
 ## Core User Flow
 
-1. Browse grocery products.
-2. Search, filter by category, or open a product detail page.
-3. Add products or recommended related items to cart.
-4. Register or login.
-5. Cart syncs to the backend account.
-6. Add or select a delivery address.
-7. Apply a coupon, then choose COD, mock UPI/card, or Razorpay payment.
-8. View the order confirmation, ETA, delivery partner, and tracking timeline.
-9. Revisit all placed orders from the Orders page.
-10. Admin confirms/updates order status from `/admin`.
-11. Delivery partner opens the delivery panel, verifies shop pickup OTP, then
-    verifies customer delivery OTP before marking the order delivered.
+1. Customer browses grocery categories, search suggestions, offers, and product
+   detail pages.
+2. Customer adds items to cart as a guest or logged-in user.
+3. Customer registers, logs in with password, or uses customer OTP login.
+4. Cart syncs to the backend account after authentication.
+5. Customer adds/selects a delivery address and applies a coupon.
+6. Customer pays with COD, mock UPI/card, or Razorpay checkout.
+7. Shop owner sees the order queue and packing list.
+8. Shop owner packs items, handles substitutions/unavailable items, assigns a
+   delivery partner, and marks the order ready.
+9. Delivery partner enters shop pickup OTP before starting the route.
+10. Customer tracks the order and sees the customer delivery OTP.
+11. Delivery partner enters the customer OTP before marking delivered.
+12. Customer can review the delivered order or open a support ticket.
 
-## Delivery Partner Website
+## Feature Matrix
 
-The delivery boy panel is a separate website in `delivery-panel/`. It connects
-to the same FastAPI backend, but runs separately from the customer React app.
+| Area | Current Capability |
+| --- | --- |
+| Catalog | Seeded grocery products, categories, images, units, stock, related products |
+| Discovery | Search, autocomplete suggestions, quick filters, coupons, promo sections |
+| Cart | Guest cart, authenticated cart sync, quantity updates, clear cart |
+| Checkout | Address CRUD, coupon preview, COD, mock UPI/card, Razorpay option |
+| Orders | ETA, invoice, notifications, cancellation, lifecycle timeline, reviews |
+| Wallet | Refund-credit balance and latest transaction history |
+| Delivery | Assignment, pickup OTP, location updates, doorstep OTP, earnings |
+| Shop owner | Packing list, rider assignment, ready-for-pickup, product and stock tools |
+| Payments | Razorpay orders, verification, webhooks, refunds, transaction history |
+| Support | Customer, delivery partner, and seller support tickets with replies |
+| Admin | Summary, analytics, settlements, orders, categories, products, inventory |
+| Security | JWT auth, hashed OTPs, security headers, trusted-host validation |
 
-Local URL:
-
-```text
-http://127.0.0.1:5174
-```
-
-It includes:
-
-- delivery partner/admin login
-- assigned order list and shift summary
-- active, pickup, on-road, and delivered tabs
-- customer call and map links
-- item checklist
-- COD collection reminders
-- status buttons for out-for-delivery and delivered
-- shop pickup OTP is required before starting the route
-- shop owner must mark the order packed/ready before pickup OTP is shown
-- customer delivery OTP is required before marking the order delivered
-- live location sharing after pickup starts
-- delivery partner support form for route, COD, customer, and app issues
-
-For deployment, set `delivery-panel/.env` or hosting env var:
+## Architecture
 
 ```text
-VITE_API_URL=https://your-api-domain.example
+Customer App (5173)        Delivery Panel (5174)       Shop Owner Panel (5175)
+        |                          |                           |
+        +--------------------------+---------------------------+
+                                   |
+                            FastAPI Backend (8000)
+                                   |
+          +------------------------+------------------------+
+          |                        |                        |
+   SQLAlchemy Models        Alembic Migrations       External Integrations
+          |                                                 |
+ SQLite / PostgreSQL                              SMTP, Razorpay, Maps links
 ```
 
-## Shop Owner Website
-
-The shop owner panel is a separate website in `shop-owner-panel/`. It is made
-for local store owners who need simple, large controls instead of a technical
-admin dashboard.
-
-Local URL:
-
-```text
-http://127.0.0.1:5175
-```
-
-It includes:
-
-- shop owner login
-- order queue with open/new/packing/done/all tabs
-- pack list for every order
-- assigned delivery partner details
-- delivery partner dropdown for assigning or reassigning riders before pickup
-- packed/ready button to release the pickup OTP
-- pickup OTP card for safe handoff to the delivery boy
-- seller support form plus support ticket desk
-- support reply thread for communicating with customers and riders
-- quick order status buttons
-- item-level packing, substitution, and unavailable-item marking
-- Razorpay refund button for paid Razorpay orders
-- settlement cards and refund status check for shop owners
-- low-stock warning list
-- stock quantity and reorder alert updates
-- edit product price, MRP, image URL, and active status
-- add product form
-- add category form
-
-For deployment, set `shop-owner-panel/.env` or hosting env var:
-
-```text
-VITE_API_URL=https://your-api-domain.example
-```
+The three React apps share the same backend API but remain separate so each user
+type gets a focused interface.
 
 ## API Overview
 
@@ -244,16 +235,14 @@ VITE_API_URL=https://your-api-domain.example
 
 ## Development Accounts
 
-The seed command creates local development operations accounts:
+The seed command creates local demo accounts.
+
+Admin and shop owner access:
 
 ```text
 Email: admin@campuskart.com
 Password: AdminPass123
 ```
-
-Use it to open `/admin`, review store metrics, update order statuses, manage
-categories/products, and tune inventory stock/reorder levels. These credentials
-are for local development only.
 
 Delivery partner accounts:
 
@@ -268,47 +257,47 @@ Email: delivery3@campuskart.com
 Password: DeliveryPass123
 ```
 
-Use them on `/delivery` after an admin moves an order to `confirmed` or
-`packing`.
+These credentials are for local development only.
 
-## Payments
+## Payments And Wallet
 
-Local checkout supports cash-on-delivery, mock online payments, and Razorpay
-checkout. The backend exposes Razorpay-ready endpoints:
+Local checkout supports COD, mock UPI/card, and Razorpay-ready checkout.
 
-- `POST /payments/razorpay/orders` creates a Razorpay order when
-  `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are configured.
-- `POST /payments/razorpay/verify` validates Razorpay payment signatures with
+- `POST /payments/razorpay/orders` creates a Razorpay order when credentials are
+  configured.
+- `POST /payments/razorpay/verify` validates Razorpay payment signatures using
   HMAC SHA-256.
-- `POST /payments/razorpay/webhook` validates `X-Razorpay-Signature`, records
+- `POST /payments/razorpay/webhook` validates webhook signatures, records
   payment events, and updates matched order payment status.
-- `POST /payments/razorpay/refunds` lets admins execute a Razorpay refund for
-  a paid Razorpay order and records the refund transaction plus wallet credit.
-- `GET /payments/razorpay/refunds/{refund_id}` refreshes local refund status
-  from Razorpay.
+- `POST /payments/razorpay/refunds` lets admins execute Razorpay refunds and
+  record refund transactions.
 - `GET /payments/transactions` returns recent payment/refund transactions for
-  admin reporting.
+  reporting.
+- Paid order cancellations and successful Razorpay refunds are recorded as
+  customer wallet credits at `/wallet`.
 
-Paid order cancellations and successful Razorpay refunds also appear in the
-customer wallet at `/wallet` with balance and transaction history.
+Configure Razorpay in `backend/.env` before using real gateway calls:
 
-Copy `backend/.env.example` to `backend/.env` and fill the Razorpay variables
-before using real gateway calls. In the customer app, choose the Razorpay payment
-option at checkout to open the hosted Razorpay checkout widget.
+```text
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+```
 
-## Customer OTP Login
+## OTP Security
 
-Customers can login or create an account using email OTP from `/login`.
+### Customer Login OTP
 
-- OTP is stored as a hash, not plain text.
-- OTP expires after `OTP_EXPIRE_MINUTES`.
+- OTPs are stored as hashes, not plain text.
+- OTPs expire after `OTP_EXPIRE_MINUTES`.
 - Resend is limited by `OTP_RESEND_COOLDOWN_SECONDS`.
 - Incorrect attempts are limited by `OTP_MAX_ATTEMPTS`.
-- OTP login is customer-only; shop owner and delivery accounts still use
-  password login.
+- OTP login is customer-only; shop owner and delivery accounts use password
+  login.
+- In development, the OTP is returned on the login page for testing.
+- In production, SMTP must be configured.
 
-In local development the OTP is shown on the login page for easy testing. In
-production, configure SMTP:
+SMTP example:
 
 ```text
 SMTP_HOST=smtp.example.com
@@ -318,32 +307,30 @@ SMTP_PASSWORD=...
 OTP_EMAIL_FROM=no-reply@example.com
 ```
 
-## Order Handoff OTP
+### Order Handoff OTP
 
 Delivery security uses two separate OTPs:
 
 1. Shop owner sees a pickup OTP after confirming/packing an order.
-2. Delivery partner enters that pickup OTP before the order can move to
-   `out_for_delivery`.
+2. Delivery partner enters that pickup OTP before moving to `out_for_delivery`.
 3. Customer sees a different delivery OTP on the order page.
-4. Delivery partner enters the customer OTP before the order can move to
-   `delivered`.
+4. Delivery partner enters the customer OTP before marking the order delivered.
 
-This keeps the packed bag from going to the wrong rider and prevents final
-delivery from being marked without customer confirmation.
+This helps prevent the packed bag from going to the wrong rider and prevents
+fake delivery completion without customer confirmation.
 
 ## Test Data
 
 The development catalog uses grocery sample product names and image URLs adapted
 from [DummyJSON Products](https://dummyjson.com/docs/products), a public fake API
-for testing and prototyping e-commerce applications. INR prices, units, stock,
-categories, and descriptions are synthetic data for this learning project.
+for testing and prototyping e-commerce applications.
 
-The active seeded catalog currently includes 27 grocery products across fruits,
-vegetables, dairy, beverages, pantry, meat and seafood, frozen desserts, pet
-care, household, and nutrition categories.
+INR prices, units, stock, categories, and descriptions are synthetic data for
+this learning project. The active seeded catalog includes 27 grocery products
+across fruits, vegetables, dairy, beverages, pantry, meat and seafood, frozen
+desserts, pet care, household, and nutrition categories.
 
-## Verify
+## Verification
 
 Run backend tests:
 
@@ -413,10 +400,16 @@ blinkit_clone/
 
 ## Roadmap
 
-- CI workflow and production observability
+- CI workflow for backend tests, frontend tests, and production builds.
+- Production observability dashboard for errors, slow APIs, payment failures,
+  refund health, and delivery exceptions.
+- Mobile app foundation with Expo/React Native using the same backend APIs.
+- Push notifications for order status, pickup, delivery, support replies, and
+  wallet credits.
+- Real maps/routing integration for delivery partners.
+- Seller onboarding, store-level permissions, and multi-store support.
 
-## Notes
+## License And Credits
 
-This is a learning project and not affiliated with Blinkit, DummyJSON, or any
-real quick-commerce brand. The app uses public demo data and synthetic business
-data for development/testing only.
+CampusKart is a private learning project. Product names/images are adapted from
+public demo data, and all business logic is synthetic for development/testing.
