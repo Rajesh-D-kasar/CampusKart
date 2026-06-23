@@ -13,6 +13,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
 import Support from "./pages/Support";
+import Wallet from "./pages/Wallet";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/wallet" element={<Wallet />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </main>

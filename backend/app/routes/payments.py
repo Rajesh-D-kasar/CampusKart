@@ -18,6 +18,7 @@ from app.payment_utils import (
     verify_razorpay_payment_signature,
     verify_razorpay_webhook_signature,
 )
+from app.wallet import record_wallet_transaction
 from app.schemas import (
     RazorpayOrderCreate,
     RazorpayOrderOut,
@@ -379,6 +380,17 @@ def create_razorpay_refund(
         currency=data.get("currency") or "INR",
         raw_payload=data,
     )
+    refund_amount_paise = int(data.get("amount") or amount_paise)
+    record_wallet_transaction(
+        db,
+        user=order.user,
+        order=order,
+        amount_paise=refund_amount_paise,
+        transaction_type="refund_credit",
+        description=f"Refund credit for order {order.order_number}",
+        reference=f"razorpay-refund-{refund_id}",
+        metadata={"provider": "razorpay", "refund_id": refund_id},
+    )
     notify_order_customer(
         db,
         order,
@@ -394,7 +406,7 @@ def create_razorpay_refund(
         "order_id": order.id,
         "payment_id": payment_id,
         "refund_id": refund_id,
-        "amount": paise_to_rupees(int(data.get("amount") or amount_paise)),
+        "amount": paise_to_rupees(refund_amount_paise),
         "currency": data.get("currency") or "INR",
         "status": data.get("status", "processed"),
         "payment_status": enum_value(order.payment_status),

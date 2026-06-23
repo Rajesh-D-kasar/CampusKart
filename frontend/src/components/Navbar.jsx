@@ -30,6 +30,9 @@ function Navbar() {
               <NavLink className={navClassName} to="/orders">
                 Orders
               </NavLink>
+              <NavLink className={navClassName} to="/wallet">
+                Wallet
+              </NavLink>
               <NavLink className={navClassName} to="/support">
                 Support
               </NavLink>

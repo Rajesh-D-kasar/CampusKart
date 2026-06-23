@@ -92,6 +92,9 @@ class User(TimestampMixin, Base):
     orders: Mapped[list["Order"]] = relationship(
         back_populates="user", foreign_keys="Order.user_id"
     )
+    wallet_transactions: Mapped[list["WalletTransaction"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class AuthOtpCode(TimestampMixin, Base):
@@ -390,6 +393,9 @@ class Order(TimestampMixin, Base):
         back_populates="order"
     )
     notifications: Mapped[list["Notification"]] = relationship(back_populates="order")
+    wallet_transactions: Mapped[list["WalletTransaction"]] = relationship(
+        back_populates="order"
+    )
     review: Mapped[Optional["OrderReview"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", uselist=False
     )
@@ -561,6 +567,31 @@ class Notification(TimestampMixin, Base):
 
     user: Mapped["User"] = relationship(foreign_keys=[user_id])
     order: Mapped[Optional["Order"]] = relationship(back_populates="notifications")
+
+
+class WalletTransaction(TimestampMixin, Base):
+    __tablename__ = "wallet_transactions"
+    __table_args__ = (
+        Index("ix_wallet_transactions_user_created", "user_id", "created_at"),
+        Index("ix_wallet_transactions_reference", "reference"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    order_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("orders.id", ondelete="SET NULL"), index=True
+    )
+    transaction_type: Mapped[str] = mapped_column(String(40), index=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    balance_after_paise: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(String(255))
+    reference: Mapped[Optional[str]] = mapped_column(String(120), unique=True)
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSON)
+
+    user: Mapped["User"] = relationship(back_populates="wallet_transactions")
+    order: Mapped[Optional["Order"]] = relationship(back_populates="wallet_transactions")
 
 
 class DeliveryLocation(TimestampMixin, Base):

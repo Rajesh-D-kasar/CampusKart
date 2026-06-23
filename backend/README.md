@@ -3,8 +3,8 @@
 FastAPI backend for the CampusKart quick-commerce app. It handles catalog,
 offers, coupon previews, authentication, cart sync, addresses, checkout, mock
 payments, Razorpay checkout/webhooks, ETA tracking, notifications, invoices,
-orders, inventory reservation, delivery operations, and admin catalog/store
-operations.
+orders, inventory reservation, wallet refund credits, delivery operations, and
+admin catalog/store operations.
 
 ## Stack
 
@@ -70,6 +70,7 @@ Alembic creates the commerce schema:
 - `orders`
 - `order_items`
 - `payment_transactions`
+- `wallet_transactions`
 - `notifications`
 - `delivery_locations`
 
@@ -118,6 +119,7 @@ Delivery partners can use `/delivery` after an order is confirmed or packing.
 | Delivery | `GET /delivery/summary`, `GET /delivery/earnings`, `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
+| Wallet | `GET /wallet` |
 | Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `POST /admin/products/bulk`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 Interactive docs:
@@ -166,5 +168,5 @@ Tests use an isolated SQLite database and do not alter local development data.
 Current expected result:
 
 ```text
-50 passed
+58 passed
 ```

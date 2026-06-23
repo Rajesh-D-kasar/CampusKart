@@ -1715,6 +1715,129 @@ button.category-card {
   color: var(--muted);
 }
 
+.wallet-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.wallet-balance-card,
+.wallet-history-card {
+  border: 1px solid #e2e8de;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.wallet-balance-card {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 86% 12%, rgb(255 219 76 / 34%), transparent 9rem),
+    linear-gradient(145deg, #f3ffed, #ffffff);
+}
+
+.wallet-balance-card > span {
+  color: #657066;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wallet-balance-card strong {
+  color: #102314;
+  font-size: clamp(2.5rem, 7vw, 4.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.08em;
+}
+
+.wallet-balance-card p {
+  margin: 0;
+  color: #59655a;
+  line-height: 1.65;
+}
+
+.wallet-history-card {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.wallet-history-card h2,
+.wallet-empty-state h3,
+.wallet-transaction-card h3,
+.wallet-transaction-card p {
+  margin: 0;
+}
+
+.wallet-empty-state {
+  padding: 28px;
+  border: 1px dashed #d8e2d3;
+  border-radius: 18px;
+  background: #fbfdf9;
+}
+
+.wallet-empty-state p {
+  margin: 8px 0 0;
+  color: #657066;
+  line-height: 1.55;
+}
+
+.wallet-transaction-list {
+  display: grid;
+  gap: 12px;
+}
+
+.wallet-transaction-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #edf1e9;
+  border-radius: 18px;
+  background: #fbfdf9;
+}
+
+.wallet-transaction-card h3 {
+  margin-top: 10px;
+  font-size: 1rem;
+}
+
+.wallet-transaction-card p {
+  margin-top: 6px;
+  color: #657066;
+  line-height: 1.5;
+}
+
+.wallet-transaction-card a {
+  color: #1f8f3a;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.wallet-transaction-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.wallet-transaction-meta strong {
+  color: #17612d;
+  font-size: 1.2rem;
+}
+
+.wallet-transaction-meta small {
+  color: #657066;
+}
+
 .order-card {
   display: flex;
   align-items: center;
@@ -2377,6 +2500,14 @@ button.category-card {
     grid-template-columns: 1fr;
   }
 
+  .wallet-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-balance-card {
+    position: static;
+  }
+
   .support-layout {
     grid-template-columns: 1fr;
   }
@@ -2458,6 +2589,15 @@ button.category-card {
   .order-card {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .wallet-transaction-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wallet-transaction-meta {
+    justify-items: start;
   }
 
   .order-card-meta {

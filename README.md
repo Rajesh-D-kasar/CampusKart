@@ -29,6 +29,7 @@ run locally, but structured like a real commerce system.
 - Razorpay payment order, checkout verification, webhook reconciliation, and payment history
 - Admin-triggered Razorpay refund execution for paid gateway orders
 - Refund status sync, payment transaction history, and settlement summary
+- Customer wallet page with refund-credit balance and transaction history
 - Dedicated product detail pages with related product recommendations
 - Search suggestions with product/category autocomplete
 - Delivered-order ratings and review tags for customer feedback
@@ -238,6 +239,7 @@ VITE_API_URL=https://your-api-domain.example
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
 | Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
+| Wallet | `GET /wallet` |
 | Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `POST /admin/products/bulk`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
 ## Development Accounts
@@ -281,11 +283,14 @@ checkout. The backend exposes Razorpay-ready endpoints:
 - `POST /payments/razorpay/webhook` validates `X-Razorpay-Signature`, records
   payment events, and updates matched order payment status.
 - `POST /payments/razorpay/refunds` lets admins execute a Razorpay refund for
-  a paid Razorpay order and records the refund transaction.
+  a paid Razorpay order and records the refund transaction plus wallet credit.
 - `GET /payments/razorpay/refunds/{refund_id}` refreshes local refund status
   from Razorpay.
 - `GET /payments/transactions` returns recent payment/refund transactions for
   admin reporting.
+
+Paid order cancellations and successful Razorpay refunds also appear in the
+customer wallet at `/wallet` with balance and transaction history.
 
 Copy `backend/.env.example` to `backend/.env` and fill the Razorpay variables
 before using real gateway calls. In the customer app, choose the Razorpay payment
@@ -358,7 +363,7 @@ npm run build
 Expected current result:
 
 ```text
-Backend tests: 50 passed
+Backend tests: 58 passed
 Frontend tests: 4 passed
 Frontend build: passed
 Delivery panel build: passed
@@ -409,7 +414,6 @@ blinkit_clone/
 ## Roadmap
 
 - CI workflow and production observability
-- Customer wallet/refund credit history
 
 ## Notes
 

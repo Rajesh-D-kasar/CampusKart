@@ -410,6 +410,23 @@ class PaymentTransactionOut(BaseModel):
     created_at: datetime
 
 
+class WalletTransactionOut(BaseModel):
+    id: int
+    order_id: int | None
+    order_number: str | None = None
+    transaction_type: str
+    amount: float
+    balance_after: float
+    description: str
+    reference: str | None = None
+    created_at: datetime
+
+
+class WalletOut(BaseModel):
+    balance: float = Field(ge=0)
+    transactions: list[WalletTransactionOut]
+
+
 class RazorpayOrderCreate(BaseModel):
     amount: float = Field(gt=0, le=500_000)
     currency: str = Field(default="INR", min_length=3, max_length=3, pattern="^[A-Z]{3}$")

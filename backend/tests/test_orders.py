@@ -259,6 +259,38 @@ def test_customer_can_cancel_order_and_release_reserved_stock(
     assert notifications.json()[0]["event_type"] == "order.cancelled"
 
 
+def test_wallet_records_paid_order_cancellation_refund_credit(
+    client,
+    db_session: Session,
+) -> None:
+    headers = auth_headers(client, email="wallet-refund@example.com")
+    product = first_product(db_session)
+    address = client.post("/addresses", json=address_payload(), headers=headers)
+    client.post(
+        "/cart/items",
+        json={"product_id": product.id, "quantity": 1},
+        headers=headers,
+    )
+    order = client.post(
+        "/orders",
+        json={"address_id": address.json()["id"], "payment_method": "upi"},
+        headers=headers,
+    )
+
+    cancelled = client.patch(
+        f"/orders/{order.json()['id']}/cancel",
+        json={"reason": "Need refund credit"},
+        headers=headers,
+    )
+    wallet = client.get("/wallet", headers=headers)
+
+    assert cancelled.status_code == 200
+    assert wallet.status_code == 200
+    assert wallet.json()["balance"] == order.json()["total"]
+    assert wallet.json()["transactions"][0]["transaction_type"] == "refund_credit"
+    assert wallet.json()["transactions"][0]["order_number"] == order.json()["order_number"]
+
+
 def test_customer_can_review_delivered_order(client, db_session: Session) -> None:
     headers = auth_headers(client, email="review-order@example.com")
     product = first_product(db_session)

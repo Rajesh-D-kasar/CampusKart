@@ -49,6 +49,7 @@ from app.schemas import (
     OrderSummaryOut,
 )
 from app.tracking import tracking_detail, tracking_summary
+from app.wallet import record_wallet_transaction
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -432,6 +433,16 @@ def cancel_my_order(
                 verified=True,
                 raw_payload={"reason": payload.reason if payload else None},
             )
+        )
+        record_wallet_transaction(
+            db,
+            user=current_user,
+            order=order,
+            amount_paise=order.total_paise,
+            transaction_type="refund_credit",
+            description=f"Refund credit for cancelled order {order.order_number}",
+            reference=f"cancel-refund-{order.id}",
+            metadata={"reason": payload.reason if payload else None},
         )
     notify_order_customer(
         db,
