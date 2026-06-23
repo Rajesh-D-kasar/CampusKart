@@ -32,6 +32,20 @@ function Invoke-Checked {
     }
 }
 
+function Test-PythonDependencies {
+    param([string]$PythonPath)
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $PythonPath -c "import fastapi, sqlalchemy, alembic, jwt, pwdlib, pydantic_settings" 1>$null 2>$null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
 function Invoke-InDirectory {
     param(
         [string]$Path,
@@ -119,10 +133,18 @@ if (-not (Test-Path $PythonExe)) {
 }
 
 Invoke-InDirectory $BackendRoot {
-    & $PythonExe -c "import fastapi, sqlalchemy, alembic, jwt, pwdlib, pydantic_settings" *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-PythonDependencies $PythonExe)) {
         Write-Step "Installing backend dependencies"
-        Invoke-Checked $PythonExe @("-m", "pip", "install", "-r", "requirements-dev.txt")
+        Invoke-Checked $PythonExe @("-m", "pip", "install", "--disable-pip-version-check", "-r", "requirements-dev.txt")
+
+        if (-not (Test-PythonDependencies $PythonExe)) {
+            Write-Step "Repairing backend virtual environment"
+            Invoke-Checked $PythonExe @("-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", "-r", "requirements-dev.txt")
+        }
+
+        if (-not (Test-PythonDependencies $PythonExe)) {
+            throw "Backend dependencies are still not importable. Delete backend\.venv and run .\run-dev.ps1 again."
+        }
     }
 
     if ($env:DATABASE_URL -match "^sqlite:///\./(.+\.db)$") {
