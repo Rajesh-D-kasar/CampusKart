@@ -1,89 +1,293 @@
 # CampusKart
 
-CampusKart is a Blinkit-inspired quick-commerce platform built with React,
-FastAPI, SQLAlchemy, and Alembic. It is designed as a realistic learning project
-for grocery ordering, store operations, delivery handoff, payments, support, and
-admin workflows.
+CampusKart is a Blinkit-style full-stack grocery delivery project. It includes a customer shopping app, a shop owner panel, a delivery boy panel, an operations dashboard, and a FastAPI backend API.
 
-This repository contains four connected surfaces:
+The project is built as a practical quick-commerce system for college project review, portfolio presentation, and full-stack learning. It covers product browsing, cart management, checkout, order tracking, OTP-based delivery handoff, inventory management, support tickets, refunds, and delivery operations.
 
-- Customer web app for browsing, cart, checkout, orders, wallet, support, and
-  tracking.
-- Delivery partner website for assigned deliveries, pickup OTP, route updates,
-  doorstep OTP, earnings, and support.
-- Shop owner website for order packing, rider assignment, pickup OTP, inventory,
-  product management, refunds, settlements, and support.
-- FastAPI backend that powers authentication, catalog, cart, orders, payments,
-  notifications, support, delivery operations, wallet credits, and admin APIs.
+## Project Overview
 
-> This is a learning project. It is not affiliated with Blinkit, DummyJSON, or
-> any real quick-commerce brand.
+CampusKart is split into multiple apps that connect to the same backend:
 
-## Table Of Contents
+| Module | Purpose |
+| --- | --- |
+| Customer app | Browse grocery products, manage cart, checkout, track orders, view wallet, and raise support tickets |
+| Shop owner panel | Manage orders, packing, rider assignment, inventory, products, refunds, settlements, and support |
+| Delivery boy panel | View assigned deliveries, verify OTPs, share location, update delivery status, track earnings, and manage support |
+| Admin / operations dashboard | Manage orders, categories, products, inventory, analytics, settlements, and support from `/admin` |
+| Backend API | FastAPI service for auth, products, cart, orders, payments, wallet, delivery, support, and admin operations |
 
-- [Why This Project Stands Out](#why-this-project-stands-out)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Local URLs](#local-urls)
-- [One-Click Run](#one-click-run)
-- [Manual Setup](#manual-setup)
-- [Common Run Issues](#common-run-issues)
-- [Core User Flow](#core-user-flow)
-- [Feature Matrix](#feature-matrix)
-- [Architecture](#architecture)
-- [API Overview](#api-overview)
-- [Development Accounts](#development-accounts)
-- [Payments And Wallet](#payments-and-wallet)
-- [OTP Security](#otp-security)
-- [Test Data](#test-data)
-- [Verification](#verification)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
+The project uses separate frontend folders for customer, delivery, and shop owner views. This keeps each user experience focused while still sharing one API and database.
 
-## Why This Project Stands Out
+## Main Modules
 
-- Full quick-commerce flow from product discovery to OTP-verified delivery.
-- Separate customer, delivery partner, and shop owner experiences connected to
-  one backend.
-- Practical local-store workflow: packing list, rider assignment, pickup OTP,
-  substitutions, unavailable-item marking, refunds, and stock management.
-- Customer safety flow with two different OTPs: one for store-to-rider pickup
-  and one for rider-to-customer delivery.
-- Payment stack with COD, mock UPI/card, Razorpay order creation, checkout
-  verification, webhook reconciliation, refunds, payment history, settlements,
-  and wallet refund credits.
-- Support desk for customer, seller, and delivery partner issues with reply
-  threads.
-- Production-minded foundations: migrations, Dockerfiles, security headers,
-  trusted-host validation, deployment config, and tests.
+### Customer App
+
+Folder: `frontend/`
+
+Main routes:
+
+- `/` home page with banners, categories, offers, and product collections
+- `/products` product listing with search, filters, sorting, and suggestions
+- `/products/:productId` product detail page with related recommendations
+- `/cart` cart page
+- `/checkout` address, coupon, and payment flow
+- `/orders` customer order history
+- `/orders/:orderId` order details, tracking, invoice, cancellation, delivery OTP, and review
+- `/wallet` refund credit balance and wallet transaction history
+- `/support` support ticket flow
+- `/login` and `/register` authentication pages
+
+### Shop Owner Panel
+
+Folder: `shop-owner-panel/`
+
+Implemented features:
+
+- Shop owner/admin login
+- Order queue with filters
+- Packing list for every order
+- Item fulfillment actions: packed, substituted, unavailable
+- Delivery partner assignment and reassignment
+- Mark order packed/ready for pickup
+- Pickup OTP display after order is ready
+- Product creation and editing
+- Category creation
+- Bulk product import from CSV-style text
+- Inventory and reorder level controls
+- Low-stock list
+- Razorpay refund action and refund status check
+- Settlement summary
+- Seller support tickets and replies
+
+### Delivery Boy Panel
+
+Folder: `delivery-panel/`
+
+Implemented features:
+
+- Delivery partner/admin login
+- Assigned order list
+- Shift summary and earnings view
+- Active, pickup, on-road, and delivered filters
+- Search by order, customer, phone, city, or address
+- Customer call link
+- Map link for delivery address
+- Item checklist
+- COD collection reminder
+- Shop pickup OTP verification before starting route
+- Customer delivery OTP verification before completing delivery
+- Live location sharing through browser geolocation
+- Delivery partner support tickets and replies
+
+### Admin / Operations Dashboard
+
+Route: `/admin`
+
+Implemented features:
+
+- Admin-only access
+- Dashboard summary cards
+- Recent order management
+- Order status update
+- Category create/update
+- Product create/update
+- Inventory quantity, reorder level, and active status update
+- Analytics view backed by `/admin/analytics`
+- Settlement data backed by `/admin/settlements`
+
+### Backend API
+
+Folder: `backend/`
+
+The backend is a FastAPI app with SQLAlchemy models and Alembic migrations. It includes:
+
+- JWT authentication
+- Customer email OTP login
+- Product catalog APIs
+- Cart APIs
+- Address APIs
+- Order placement and cancellation
+- Order invoice
+- Order review
+- Store inventory reservation
+- Delivery assignment and delivery status updates
+- Shop pickup OTP and customer delivery OTP verification
+- Notification APIs
+- Support ticket APIs
+- Razorpay order, verification, webhook, refund, and refund status APIs
+- Wallet refund credit APIs
+- Admin APIs for orders, delivery partners, categories, products, bulk import, inventory, analytics, and settlements
+
+## Features
+
+### Customer Features
+
+- Browse grocery catalog by category
+- Search and product suggestions
+- Product detail pages
+- Related product recommendations
+- Guest cart and authenticated cart sync
+- Address CRUD
+- Coupon preview and discount application
+- Cash on delivery
+- Demo UPI/card payment flow
+- Razorpay checkout integration when keys are configured
+- Order confirmation and tracking timeline
+- Invoice view
+- Order cancellation
+- Delivery OTP display
+- Delivered order review and ratings
+- Wallet refund credit history
+- Support ticket creation and replies
+
+### Shop Owner Features
+
+- View and filter store orders
+- See packing list and item quantities
+- Mark items packed, substituted, or unavailable
+- Assign delivery partner
+- Mark order ready for pickup
+- Show pickup OTP for safe handoff
+- Manage stock quantity and reorder level
+- Add and update products
+- Add categories
+- Bulk product import
+- Trigger Razorpay refund for paid Razorpay orders
+- Check refund status
+- View settlement cards
+- Manage support tickets
+
+### Delivery Boy Features
+
+- View assigned deliveries
+- See delivery summary and estimated earnings
+- Start route only after shop pickup OTP verification
+- Complete delivery only after customer OTP verification
+- Share live delivery location
+- Open map for customer address
+- Call customer
+- Track COD collection requirement
+- Create and reply to support tickets
+
+### Backend Features
+
+- FastAPI app with OpenAPI docs
+- SQLAlchemy 2 models
+- Alembic migrations
+- SQLite default local run
+- PostgreSQL support through Docker Compose
+- JWT auth with Argon2 password hashing
+- Hashed OTP login flow with expiry, cooldown, and max attempts
+- Trusted host middleware
+- CORS configuration
+- Security response headers
+- Pytest backend test suite
 
 ## Tech Stack
 
-| Layer | Tools |
+| Layer | Technology |
 | --- | --- |
-| Customer frontend | React 19, Vite, React Router, Axios |
-| Delivery panel | React 19, Vite, Axios |
-| Shop owner panel | React 19, Vite, Axios |
-| Backend | FastAPI, SQLAlchemy 2, Pydantic, Uvicorn |
-| Database | SQLite for local run, PostgreSQL-ready through Docker Compose |
+| Customer app | React 19, Vite, React Router, Axios |
+| Shop owner panel | React 19, Vite, browser Fetch API |
+| Delivery boy panel | React 19, Vite, browser Fetch API |
+| Backend | FastAPI, SQLAlchemy 2, Pydantic Settings, Uvicorn |
+| Database | SQLite for local development, PostgreSQL through Docker Compose |
 | Migrations | Alembic |
-| Auth | JWT, Argon2 password hashing |
-| OTP | Hashed email OTP, SMTP-ready delivery, dev-mode test code |
-| Payments | Razorpay-ready APIs plus local mock payments |
-| Tests | Pytest, Node test runner, Vite build |
-| Deployment | Docker, Nginx static frontend, Render/Vercel-ready config |
+| Authentication | JWT, Argon2 password hashing, email OTP flow |
+| Payments | Razorpay-ready backend APIs, demo UPI/card flow, COD |
+| Testing | Pytest, Node test runner |
+| Deployment | Docker, Nginx, Render blueprint, Vercel rewrites |
 
-For production setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
+## Screenshots / Demo
 
-## Prerequisites
+Screenshots are not committed yet.
 
-Install these before running the project locally:
+Suggested folder:
 
-- Windows 10/11 with PowerShell
-- Python 3.12
+```text
+docs/screenshots/
+```
+
+Suggested screenshots to add:
+
+- Customer home page
+- Product listing page
+- Product detail page
+- Cart and checkout
+- Order tracking page
+- Customer wallet page
+- Shop owner order queue
+- Shop owner inventory screen
+- Delivery boy active order screen
+- Admin dashboard
+- FastAPI Swagger docs at `http://127.0.0.1:8000/docs`
+
+After adding images, reference them here like:
+
+```md
+![Customer Home](docs/screenshots/customer-home.png)
+```
+
+## Folder Structure
+
+```text
+blinkit_clone/
+|-- backend/
+|   |-- app/
+|   |   |-- routes/
+|   |   |-- auth.py
+|   |   |-- config.py
+|   |   |-- database.py
+|   |   |-- models.py
+|   |   |-- schemas.py
+|   |   `-- seed.py
+|   |-- alembic/
+|   |-- tests/
+|   |-- Dockerfile
+|   |-- requirements.txt
+|   `-- requirements-dev.txt
+|-- frontend/
+|   |-- src/
+|   |   |-- api/
+|   |   |-- components/
+|   |   |-- context/
+|   |   |-- pages/
+|   |   `-- utils/
+|   |-- Dockerfile
+|   |-- package.json
+|   |-- nginx.conf
+|   `-- vercel.json
+|-- delivery-panel/
+|   |-- src/
+|   |-- Dockerfile
+|   |-- package.json
+|   |-- nginx.conf
+|   `-- vercel.json
+|-- shop-owner-panel/
+|   |-- src/
+|   |-- Dockerfile
+|   |-- package.json
+|   |-- nginx.conf
+|   `-- vercel.json
+|-- deploy/
+|   `-- render.yaml
+|-- compose.yaml
+|-- DEPLOYMENT.md
+|-- run-dev.bat
+|-- run-dev.ps1
+`-- README.md
+```
+
+## How To Run Locally
+
+### Prerequisites
+
+Install:
+
+- Python 3.12 or compatible Python version
 - Node.js 20 or newer
 - Git
-- Docker Desktop, only if you want PostgreSQL or Docker Compose
+- Docker Desktop, only if using Docker Compose / PostgreSQL
 
 Check versions:
 
@@ -94,427 +298,403 @@ npm --version
 git --version
 ```
 
-## Local URLs
+### Recommended One-Click Run On Windows
 
-| Surface | URL |
-| --- | --- |
-| Customer app | `http://127.0.0.1:5173` |
-| Delivery partner panel | `http://127.0.0.1:5174` |
-| Shop owner panel | `http://127.0.0.1:5175` |
-| Backend API | `http://127.0.0.1:8000` |
-| API docs | `http://127.0.0.1:8000/docs` |
-| Database health | `http://127.0.0.1:8000/health/database` |
-
-## One-Click Run
-
-This is the recommended way to run the full project locally.
-
-1. Open PowerShell.
-2. Go to the project folder:
-
-```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone
-```
-
-3. Start everything:
+From the project root:
 
 ```powershell
 .\run-dev.ps1
 ```
 
-If PowerShell blocks the script, run:
+If PowerShell blocks scripts:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
 ```
 
-You can also double-click:
+You can also run:
 
 ```text
 run-dev.bat
 ```
 
-The script will:
+The script prepares the backend, applies migrations, seeds data, installs frontend dependencies when needed, starts all apps, and opens the browser.
 
-- create or reuse the backend virtual environment
-- install backend dependencies when needed
-- apply Alembic migrations
-- seed the development catalog and demo accounts
-- install frontend dependencies when needed
-- start backend, customer app, delivery panel, and shop owner panel
-- open the customer app in the browser
+Local URLs:
 
-First run may take a few minutes because dependencies are installed. After the
-servers start, open:
+| App | URL |
+| --- | --- |
+| Customer app | `http://127.0.0.1:5173` |
+| Delivery boy panel | `http://127.0.0.1:5174` |
+| Shop owner panel | `http://127.0.0.1:5175` |
+| Backend API | `http://127.0.0.1:8000` |
+| API docs | `http://127.0.0.1:8000/docs` |
+| Database health | `http://127.0.0.1:8000/health/database` |
 
-```text
-Customer app:         http://127.0.0.1:5173
-Delivery panel:       http://127.0.0.1:5174
-Shop owner panel:     http://127.0.0.1:5175
-Backend API docs:     http://127.0.0.1:8000/docs
-```
+## Backend Setup
 
-To stop the app, press `Ctrl+C` in the running terminals or close the terminal
-windows. To start again, run `.\run-dev.ps1` from the project folder.
-
-## Manual Setup
-
-Use this method if you want to run each service in a separate terminal.
-
-### Backend
-
-Open Terminal 1:
+Open a terminal in the project root:
 
 ```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd backend
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+For local SQLite:
+
+```powershell
+$env:DATABASE_URL = "sqlite:///./dev.db"
 .\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe -m app.seed
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-The default local setup uses SQLite. For PostgreSQL development, copy
-`backend/.env.example` to `backend/.env`, start Docker, then run:
+Backend runs at:
 
-```powershell
-docker compose up -d database
+```text
+http://127.0.0.1:8000
 ```
 
-### Customer Frontend
+## Frontend / Customer App Setup
 
-Open Terminal 2:
+Open another terminal:
 
 ```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone
 cd frontend
 npm.cmd install
 npm.cmd run dev
 ```
 
-### Delivery Partner Panel
+Customer app runs at:
 
-Open Terminal 3:
-
-```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone
-cd delivery-panel
-npm.cmd install
-npm.cmd run dev -- --port 5174
+```text
+http://127.0.0.1:5173
 ```
 
-### Shop Owner Panel
-
-Open Terminal 4:
+Useful commands from `frontend/package.json`:
 
 ```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone
-cd shop-owner-panel
-npm.cmd install
-npm.cmd run dev -- --port 5175
+npm.cmd run dev
+npm.cmd run build
+npm.cmd test
+npm.cmd run preview
 ```
 
-### Docker Compose
+## Shop Owner Panel Setup
+
+The shop owner panel uses Vite from the customer frontend dependencies. Install the customer frontend dependencies first:
 
 ```powershell
-docker compose up --build
+cd frontend
+npm.cmd install
 ```
 
-Then open the URLs listed in [Local URLs](#local-urls).
-
-## Common Run Issues
-
-### `npm.ps1 cannot be loaded`
-
-PowerShell may block `npm` scripts. Use `npm.cmd` instead:
+Then run:
 
 ```powershell
-npm.cmd install
+cd ..\shop-owner-panel
 npm.cmd run dev
 ```
 
-### `run-dev.ps1 cannot be loaded`
-
-Run the script with a temporary execution-policy bypass:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\run-dev.ps1
-```
-
-### Port already in use
-
-Default ports are:
+Shop owner panel runs at:
 
 ```text
-Backend:          8000
-Customer app:     5173
-Delivery panel:   5174
-Shop owner panel: 5175
+http://127.0.0.1:5175
 ```
 
-Close the old terminal running the app, then run `.\run-dev.ps1` again.
-
-### Fresh local database
-
-For a clean local dev database, stop the backend, remove `backend/dev.db`, then
-run:
+Useful commands from `shop-owner-panel/package.json`:
 
 ```powershell
-cd C:\Users\ASUS\Documents\Codex\blinkit_clone\backend
-.\.venv\Scripts\python.exe -m alembic upgrade head
-.\.venv\Scripts\python.exe -m app.seed
+npm.cmd run dev
+npm.cmd run build
+npm.cmd run preview
 ```
 
-## Core User Flow
+## Delivery Panel Setup
 
-1. Customer browses grocery categories, search suggestions, offers, and product
-   detail pages.
-2. Customer adds items to cart as a guest or logged-in user.
-3. Customer registers, logs in with password, or uses customer OTP login.
-4. Cart syncs to the backend account after authentication.
-5. Customer adds/selects a delivery address and applies a coupon.
-6. Customer pays with COD, mock UPI/card, or Razorpay checkout.
-7. Shop owner sees the order queue and packing list.
-8. Shop owner packs items, handles substitutions/unavailable items, assigns a
-   delivery partner, and marks the order ready.
-9. Delivery partner enters shop pickup OTP before starting the route.
-10. Customer tracks the order and sees the customer delivery OTP.
-11. Delivery partner enters the customer OTP before marking delivered.
-12. Customer can review the delivered order or open a support ticket.
+The delivery panel also uses Vite from the customer frontend dependencies.
 
-## Feature Matrix
+```powershell
+cd frontend
+npm.cmd install
+cd ..\delivery-panel
+npm.cmd run dev
+```
 
-| Area | Current Capability |
-| --- | --- |
-| Catalog | Seeded grocery products, categories, images, units, stock, related products |
-| Discovery | Search, autocomplete suggestions, quick filters, coupons, promo sections |
-| Cart | Guest cart, authenticated cart sync, quantity updates, clear cart |
-| Checkout | Address CRUD, coupon preview, COD, mock UPI/card, Razorpay option |
-| Orders | ETA, invoice, notifications, cancellation, lifecycle timeline, reviews |
-| Wallet | Refund-credit balance and latest transaction history |
-| Delivery | Assignment, pickup OTP, location updates, doorstep OTP, earnings |
-| Shop owner | Packing list, rider assignment, ready-for-pickup, product and stock tools |
-| Payments | Razorpay orders, verification, webhooks, refunds, transaction history |
-| Support | Customer, delivery partner, and seller support tickets with replies |
-| Admin | Summary, analytics, settlements, orders, categories, products, inventory |
-| Security | JWT auth, hashed OTPs, security headers, trusted-host validation |
-
-## Architecture
+Delivery panel runs at:
 
 ```text
-Customer App (5173)        Delivery Panel (5174)       Shop Owner Panel (5175)
-        |                          |                           |
-        +--------------------------+---------------------------+
-                                   |
-                            FastAPI Backend (8000)
-                                   |
-          +------------------------+------------------------+
-          |                        |                        |
-   SQLAlchemy Models        Alembic Migrations       External Integrations
-          |                                                 |
- SQLite / PostgreSQL                              SMTP, Razorpay, Maps links
+http://127.0.0.1:5174
 ```
 
-The three React apps share the same backend API but remain separate so each user
-type gets a focused interface.
+Useful commands from `delivery-panel/package.json`:
 
-## API Overview
+```powershell
+npm.cmd run dev
+npm.cmd run build
+npm.cmd run preview
+```
 
-| Area | Endpoints |
-| --- | --- |
-| Health | `GET /health`, `GET /health/database` |
-| Products | `GET /products`, `GET /products/categories`, `GET /products/suggestions`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
-| Offers | `GET /offers`, `POST /offers/coupons/preview` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
-| OTP Auth | `POST /auth/otp/request`, `POST /auth/otp/verify` |
-| Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
-| Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/review`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
-| Delivery | `GET /delivery/summary`, `GET /delivery/earnings`, `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
-| Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
-| Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET/PATCH /admin/support/tickets` |
-| Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
-| Wallet | `GET /wallet` |
-| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET /admin/delivery-partners`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `POST /admin/products/bulk`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
+## Admin Panel Setup
 
-## Development Accounts
+The admin dashboard is part of the customer React app.
 
-The seed command creates local demo accounts.
+Run the backend and customer frontend, then open:
 
-Admin and shop owner access:
+```text
+http://127.0.0.1:5173/admin
+```
+
+Demo admin login:
 
 ```text
 Email: admin@campuskart.com
 Password: AdminPass123
 ```
 
-Delivery partner accounts:
+## Demo Accounts
+
+The seed command creates these local accounts:
 
 ```text
-Email: delivery1@campuskart.com
-Password: DeliveryPass123
+Admin / shop owner:
+admin@campuskart.com / AdminPass123
 
-Email: delivery2@campuskart.com
-Password: DeliveryPass123
-
-Email: delivery3@campuskart.com
-Password: DeliveryPass123
+Delivery partners:
+delivery1@campuskart.com / DeliveryPass123
+delivery2@campuskart.com / DeliveryPass123
+delivery3@campuskart.com / DeliveryPass123
 ```
 
-These credentials are for local development only.
+Customers can register from the app or use OTP login.
 
-## Payments And Wallet
+## Environment Variables
 
-Local checkout supports COD, mock UPI/card, and Razorpay-ready checkout.
+### Backend
 
-- `POST /payments/razorpay/orders` creates a Razorpay order when credentials are
-  configured.
-- `POST /payments/razorpay/verify` validates Razorpay payment signatures using
-  HMAC SHA-256.
-- `POST /payments/razorpay/webhook` validates webhook signatures, records
-  payment events, and updates matched order payment status.
-- `POST /payments/razorpay/refunds` lets admins execute Razorpay refunds and
-  record refund transactions.
-- `GET /payments/transactions` returns recent payment/refund transactions for
-  reporting.
-- Paid order cancellations and successful Razorpay refunds are recorded as
-  customer wallet credits at `/wallet`.
+The backend reads environment variables through `backend/app/config.py`. You can create `backend/.env` to override defaults.
 
-Configure Razorpay in `backend/.env` before using real gateway calls:
+Important variables:
 
-```text
+```env
+APP_NAME=CampusKart API
+ENVIRONMENT=development
+DATABASE_URL=sqlite:///./dev.db
+JWT_SECRET_KEY=change-this-dev-secret-before-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+CORS_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173","http://localhost:5174","http://127.0.0.1:5174","http://localhost:5175","http://127.0.0.1:5175"]
+ALLOWED_HOSTS=["localhost","127.0.0.1","testserver"]
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
+OTP_EXPIRE_MINUTES=5
+OTP_RESEND_COOLDOWN_SECONDS=45
+OTP_MAX_ATTEMPTS=5
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_USE_TLS=true
+OTP_EMAIL_FROM=no-reply@campuskart.local
 ```
 
-## OTP Security
+### Customer App
 
-### Customer Login OTP
+```env
+VITE_API_URL=http://127.0.0.1:8000
+VITE_DELIVERY_PANEL_URL=http://127.0.0.1:5174
+VITE_SHOP_OWNER_PANEL_URL=http://127.0.0.1:5175
+```
 
-- OTPs are stored as hashes, not plain text.
-- OTPs expire after `OTP_EXPIRE_MINUTES`.
-- Resend is limited by `OTP_RESEND_COOLDOWN_SECONDS`.
-- Incorrect attempts are limited by `OTP_MAX_ATTEMPTS`.
-- OTP login is customer-only; shop owner and delivery accounts use password
-  login.
-- In development, the OTP is returned on the login page for testing.
-- In production, SMTP must be configured.
+### Delivery Panel
 
-SMTP example:
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+### Shop Owner Panel
+
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+## API Overview
+
+Interactive API documentation:
 
 ```text
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=...
-SMTP_PASSWORD=...
-OTP_EMAIL_FROM=no-reply@example.com
+http://127.0.0.1:8000/docs
 ```
 
-### Order Handoff OTP
+Main API groups:
 
-Delivery security uses two separate OTPs:
+| Area | Endpoints |
+| --- | --- |
+| Health | `GET /`, `GET /health`, `GET /health/database` |
+| Products | `GET /products`, `GET /products/categories`, `GET /products/suggestions`, `GET /products/{id}`, `GET /products/{id}/recommendations` |
+| Offers | `GET /offers`, `POST /offers/coupons/preview` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/otp/request`, `POST /auth/otp/verify`, `GET /auth/me` |
+| Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{product_id}`, `DELETE /cart/items/{product_id}`, `DELETE /cart` |
+| Addresses | `GET /addresses`, `POST /addresses`, `PATCH /addresses/{id}`, `DELETE /addresses/{id}` |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PUT /orders/{id}/review`, `PATCH /orders/{id}/cancel`, `GET /orders/{id}/invoice` |
+| Delivery | `GET /delivery/summary`, `GET /delivery/earnings`, `GET /delivery/orders`, `POST /delivery/orders/{id}/location`, `PATCH /delivery/orders/{id}/status` |
+| Payments | `GET /payments/transactions`, `POST /payments/razorpay/orders`, `POST /payments/razorpay/verify`, `POST /payments/razorpay/refunds`, `GET /payments/razorpay/refunds/{refund_id}`, `POST /payments/razorpay/webhook` |
+| Wallet | `GET /wallet` |
+| Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
+| Support | `POST /support/tickets`, `GET /support/tickets`, `POST /support/tickets/{id}/messages`, `GET /admin/support/tickets`, `PATCH /admin/support/tickets/{id}` |
+| Admin | `GET /admin/summary`, `GET /admin/analytics`, `GET /admin/settlements`, `GET /admin/orders`, `GET /admin/delivery-partners`, `PATCH /admin/orders/{id}/status`, `PATCH /admin/orders/{id}/assignment`, `PATCH /admin/orders/{id}/ready`, `PATCH /admin/orders/{id}/items/{item_id}`, `GET/POST/PATCH /admin/categories`, `GET/POST/PATCH /admin/products`, `POST /admin/products/bulk`, `GET /admin/inventory`, `PATCH /admin/inventory/{product_id}` |
 
-1. Shop owner sees a pickup OTP after confirming/packing an order.
-2. Delivery partner enters that pickup OTP before moving to `out_for_delivery`.
-3. Customer sees a different delivery OTP on the order page.
-4. Delivery partner enters the customer OTP before marking the order delivered.
+## Docker And Deployment
 
-This helps prevent the packed bag from going to the wrong rider and prevents
-fake delivery completion without customer confirmation.
+### Docker Compose
 
-## Test Data
+The repository includes `compose.yaml` with services for:
 
-The development catalog uses grocery sample product names and image URLs adapted
-from [DummyJSON Products](https://dummyjson.com/docs/products), a public fake API
-for testing and prototyping e-commerce applications.
+- PostgreSQL database
+- FastAPI backend
+- Customer frontend
+- Delivery panel
+- Shop owner panel
 
-INR prices, units, stock, categories, and descriptions are synthetic data for
-this learning project. The active seeded catalog includes 27 grocery products
-across fruits, vegetables, dairy, beverages, pantry, meat and seafood, frozen
-desserts, pet care, household, and nutrition categories.
+Run:
 
-## Verification
+```powershell
+docker compose up --build
+```
 
-Run backend tests:
+Then open:
+
+```text
+Customer app:      http://127.0.0.1:5173
+Delivery panel:    http://127.0.0.1:5174
+Shop owner panel:  http://127.0.0.1:5175
+Backend API:       http://127.0.0.1:8000
+```
+
+### Backend Dockerfile
+
+The backend Dockerfile installs `backend/requirements.txt`, runs Alembic migrations, seeds baseline data, and starts Uvicorn.
+
+Start command from `backend/Dockerfile`:
+
+```sh
+alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+```
+
+### Render / Vercel
+
+Deployment files included:
+
+- `deploy/render.yaml` for Render Docker services
+- `frontend/vercel.json`
+- `delivery-panel/vercel.json`
+- `shop-owner-panel/vercel.json`
+- Dockerfiles for backend, customer frontend, delivery panel, and shop owner panel
+
+More deployment notes are in:
+
+```text
+DEPLOYMENT.md
+```
+
+## Testing And Verification
+
+Backend tests:
 
 ```powershell
 cd backend
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-Run frontend tests and build:
+Frontend tests:
 
 ```powershell
 cd frontend
-npm test
-npm run build
+npm.cmd test
 ```
 
-Expected current result:
+Build customer app:
 
-```text
-Backend tests: 58 passed
-Frontend tests: 4 passed
-Frontend build: passed
-Delivery panel build: passed
-Shop owner panel build: passed
+```powershell
+cd frontend
+npm.cmd run build
 ```
 
-## Project Structure
+Build delivery panel:
 
-```text
-blinkit_clone/
-|-- backend/
-|   |-- Dockerfile
-|   |-- app/
-|   |   |-- routes/
-|   |   |-- auth.py
-|   |   |-- config.py
-|   |   |-- database.py
-|   |   |-- models.py
-|   |   |-- schemas.py
-|   |   `-- seed.py
-|   |-- alembic/
-|   `-- tests/
-|-- frontend/
-|   |-- Dockerfile
-|   |-- nginx.conf
-|   `-- src/
-|       |-- api/
-|       |-- components/
-|       |-- context/
-|       `-- pages/
-|-- delivery-panel/
-|   |-- Dockerfile
-|   |-- index.html
-|   |-- nginx.conf
-|   `-- src/
-|-- shop-owner-panel/
-|   |-- Dockerfile
-|   |-- index.html
-|   |-- nginx.conf
-|   `-- src/
-|-- deploy/
-|   `-- render.yaml
-|-- compose.yaml
-|-- run-dev.bat
-`-- run-dev.ps1
+```powershell
+cd delivery-panel
+npm.cmd run build
 ```
 
-## Roadmap
+Build shop owner panel:
 
-- CI workflow for backend tests, frontend tests, and production builds.
-- Production observability dashboard for errors, slow APIs, payment failures,
-  refund health, and delivery exceptions.
-- Mobile app foundation with Expo/React Native using the same backend APIs.
-- Push notifications for order status, pickup, delivery, support replies, and
-  wallet credits.
-- Real maps/routing integration for delivery partners.
-- Seller onboarding, store-level permissions, and multi-store support.
+```powershell
+cd shop-owner-panel
+npm.cmd run build
+```
 
-## License And Credits
+The backend test suite currently contains tests for health checks, catalog, search, cart, addresses, auth, OTP login, orders, coupons, delivery, admin, support, migrations, payments, refunds, wallet credits, and reviews.
 
-CampusKart is a private learning project. Product names/images are adapted from
-public demo data, and all business logic is synthetic for development/testing.
+## Current Project Status
+
+Current status: functional full-stack development version.
+
+Implemented and verified in code:
+
+- Customer web app
+- Backend API
+- Shop owner panel
+- Delivery boy panel
+- Admin dashboard
+- SQLite local development
+- PostgreSQL Docker Compose setup
+- Alembic migrations
+- Demo seed data
+- Backend tests
+- Frontend tests and builds
+- Dockerfiles and deployment configuration
+
+The project is ready for local demo, GitHub showcase, and college project review. Production use would still require real domain setup, production secrets, SMTP configuration, Razorpay production keys, monitoring, and security review.
+
+## Future Improvements
+
+Planned or possible improvements:
+
+- Add real screenshots and demo video links
+- Add CI workflow for backend tests and frontend builds
+- Add mobile app using the same backend APIs
+- Add production monitoring and error logging
+- Add real-time order updates with WebSockets or server-sent events
+- Add advanced seller roles and multi-store permissions
+- Add better delivery route optimization
+- Add push notifications for order and support updates
+- Add more payment provider test cases
+
+## What I Learned
+
+While building this project, I practiced:
+
+- Designing a multi-role full-stack application
+- Building REST APIs with FastAPI
+- Using SQLAlchemy models and relationships
+- Managing database migrations with Alembic
+- Implementing JWT authentication and OTP login
+- Connecting multiple React/Vite apps to one backend
+- Handling cart, checkout, order, inventory, and delivery workflows
+- Working with Razorpay-style payment and refund flows
+- Writing backend and frontend tests
+- Preparing Docker and deployment-ready project structure
+- Writing project documentation for real reviewers and recruiters
+
+## Author
+
+Rajesh
+
+GitHub: [Rajesh-D-kasar](https://github.com/Rajesh-D-kasar)
+
+## Notes
+
+This project is not affiliated with Blinkit. Product names and images in seed data are adapted from public demo grocery data. Prices, inventory, users, and business data are for development and testing only.
