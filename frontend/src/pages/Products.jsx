@@ -240,7 +240,7 @@ function Products() {
         </button>
       </div>
 
-      {status === "loading" && <p className="status-card">Loading products...</p>}
+      {status === "loading" && <p className="status-card">Finding fresh picks...</p>}
       {status === "error" && (
         <div className="status-card error-card">
           <h2>Products could not be loaded</h2>

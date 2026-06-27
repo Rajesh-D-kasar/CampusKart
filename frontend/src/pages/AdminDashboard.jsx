@@ -14,6 +14,12 @@ import {
   updateAdminProduct,
 } from "../api/adminApi";
 import { useAuth } from "../context/AuthContext";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatLabel,
+  formatPaymentMethod,
+} from "../utils/formatters";
 
 const orderStatuses = [
   "placed",
@@ -72,31 +78,6 @@ function productEdit(product) {
   };
 }
 
-function Price({ value }) {
-  return (
-    <>
-      {"\u20B9"}
-      {value}
-    </>
-  );
-}
-
-function formatStatus(status) {
-  return status.replaceAll("_", " ");
-}
-
-function formatPaymentMethod(method) {
-  if (method === "upi") return "Mock UPI";
-  if (method === "card") return "Mock card";
-  return "Cash on delivery";
-}
-
-function formatDate(dateValue) {
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
 
 function formatEta(order) {
   if (order.status === "cancelled") return "Cancelled";
@@ -168,7 +149,7 @@ function AdminDashboard() {
         )
       );
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not load admin data.");
+      setError(adminError.response?.data?.detail || "We could not load the dashboard.");
     } finally {
       setLoading(false);
     }
@@ -196,7 +177,7 @@ function AdminDashboard() {
       );
       setSummary(await getAdminSummary());
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not update order.");
+      setError(adminError.response?.data?.detail || "We could not update this order.");
     } finally {
       setSaving("");
     }
@@ -232,7 +213,7 @@ function AdminDashboard() {
       }));
       setCategoryForm(emptyCategoryForm);
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not create category.");
+      setError(adminError.response?.data?.detail || "We could not create this category.");
     } finally {
       setSaving("");
     }
@@ -257,7 +238,7 @@ function AdminDashboard() {
         [categoryId]: categoryEdit(updatedCategory),
       }));
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not update category.");
+      setError(adminError.response?.data?.detail || "We could not update this category.");
     } finally {
       setSaving("");
     }
@@ -314,7 +295,7 @@ function AdminDashboard() {
         category_id: categories[0]?.id || "",
       });
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not create product.");
+      setError(adminError.response?.data?.detail || "We could not create this product.");
     } finally {
       setSaving("");
     }
@@ -327,7 +308,7 @@ function AdminDashboard() {
       await updateAdminProduct(productId, productPayload(productEdits[productId]));
       await refreshCatalogAfterProductChange();
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not update product.");
+      setError(adminError.response?.data?.detail || "We could not update this product.");
     } finally {
       setSaving("");
     }
@@ -358,7 +339,7 @@ function AdminDashboard() {
       );
       setSummary(await getAdminSummary());
     } catch (adminError) {
-      setError(adminError.response?.data?.detail || "Could not update inventory.");
+      setError(adminError.response?.data?.detail || "We could not update inventory.");
     } finally {
       setSaving("");
     }
@@ -409,7 +390,7 @@ function AdminDashboard() {
         </button>
       </div>
 
-      {loading && <p className="status-card">Loading admin data...</p>}
+      {loading && <p className="status-card">Opening the store dashboard...</p>}
       {error && <p className="form-error">{error}</p>}
 
       {summary && (
@@ -433,7 +414,7 @@ function AdminDashboard() {
           <article>
             <span>Revenue</span>
             <strong>
-              <Price value={summary.total_revenue} />
+              {formatCurrency(summary.total_revenue)}
             </strong>
           </article>
         </div>
@@ -446,17 +427,17 @@ function AdminDashboard() {
             <small>Update fulfillment status as orders move forward.</small>
           </div>
           <div className="admin-list">
-            {orders.length === 0 && <p>No orders yet.</p>}
+            {orders.length === 0 && <p>No live orders at the moment.</p>}
             {orders.map((order) => (
               <article className="admin-order-row" key={order.id}>
                 <div>
                   <span className="order-card-label">#{order.order_number}</span>
                   <h3>
-                    <Price value={order.total} /> - {order.customer_name}
+                    {formatCurrency(order.total)} - {order.customer_name}
                   </h3>
                   <p>
                     {order.item_count} item{order.item_count === 1 ? "" : "s"} -
-                    {order.delivery_city || "No city"} - {formatDate(order.created_at)}
+                    {order.delivery_city || "No city"} - {formatDateTime(order.created_at)}
                   </p>
                   <div className="admin-order-meta">
                     <span>{formatEta(order)}</span>
@@ -467,14 +448,14 @@ function AdminDashboard() {
                     </span>
                     <span>
                       {formatPaymentMethod(order.payment_method)} -{" "}
-                      {formatStatus(order.payment_status)}
+                      {formatLabel(order.payment_status)}
                     </span>
                   </div>
                   <p>{order.tracking_message}</p>
                 </div>
                 <div className="admin-order-actions">
                   <span className={`status-pill status-${order.status}`}>
-                    {formatStatus(order.status)}
+                    {formatLabel(order.status)}
                   </span>
                   <select
                     disabled={saving === `order-${order.id}`}
@@ -485,7 +466,7 @@ function AdminDashboard() {
                   >
                     {orderStatuses.map((status) => (
                       <option key={status} value={status}>
-                        {formatStatus(status)}
+                        {formatLabel(status)}
                       </option>
                     ))}
                   </select>

@@ -6,34 +6,12 @@ import {
   getOrderInvoice,
   submitOrderReview,
 } from "../api/orderApi";
-
-function Price({ value }) {
-  return (
-    <>
-      {"\u20B9"}
-      {value}
-    </>
-  );
-}
-
-function formatStatus(status) {
-  return status.replaceAll("_", " ");
-}
-
-function formatPaymentMethod(method) {
-  if (method === "upi") return "Mock UPI";
-  if (method === "card") return "Mock card";
-  if (method === "razorpay") return "Razorpay";
-  return "Cash on delivery";
-}
-
-function formatDateTime(dateValue) {
-  if (!dateValue) return "Updating soon";
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
+import {
+  formatCurrency,
+  formatDateTime,
+  formatLabel,
+  formatPaymentMethod,
+} from "../utils/formatters";
 
 function formatEta(order) {
   if (order.status === "cancelled") return "Cancelled";
@@ -81,7 +59,7 @@ function OrderConfirmation() {
       try {
         setOrder(await getOrder(orderId));
       } catch (orderError) {
-        setError(orderError.response?.data?.detail || "Could not load order.");
+        setError(orderError.response?.data?.detail || "We could not load this order.");
       } finally {
         setLoading(false);
       }
@@ -105,7 +83,7 @@ function OrderConfirmation() {
   if (loading) {
     return (
       <section className="container page-section">
-        <p className="status-card">Loading order...</p>
+        <p className="status-card">Getting your order ready...</p>
       </section>
     );
   }
@@ -136,7 +114,7 @@ function OrderConfirmation() {
       setOrder(await cancelOrder(order.id, reason.trim()));
     } catch (cancelError) {
       setActionError(
-        cancelError.response?.data?.detail || "Could not cancel order."
+        cancelError.response?.data?.detail || "We could not cancel this order."
       );
     }
   };
@@ -147,7 +125,7 @@ function OrderConfirmation() {
       setInvoice(await getOrderInvoice(order.id));
     } catch (invoiceError) {
       setActionError(
-        invoiceError.response?.data?.detail || "Could not load invoice."
+        invoiceError.response?.data?.detail || "We could not load this invoice."
       );
     }
   };
@@ -178,7 +156,9 @@ function OrderConfirmation() {
       setOrder((current) => ({ ...current, review }));
       setReviewMessage("Thanks! Review save ho gaya.");
     } catch (reviewError) {
-      setActionError(reviewError.response?.data?.detail || "Could not save review.");
+      setActionError(
+        reviewError.response?.data?.detail || "We could not save your review."
+      );
     } finally {
       setReviewSaving(false);
     }
@@ -229,7 +209,7 @@ function OrderConfirmation() {
           </article>
           <article>
             <span>Current status</span>
-            <strong>{formatStatus(order.status)}</strong>
+            <strong>{formatLabel(order.status)}</strong>
             <small>{formatDateTime(order.updated_at)}</small>
           </article>
           {order.delivery_location && (
@@ -275,13 +255,13 @@ function OrderConfirmation() {
                   </small>
                   {item.fulfillment_status !== "pending" && (
                     <small>
-                      {formatStatus(item.fulfillment_status)}
+                      {formatLabel(item.fulfillment_status)}
                       {item.substitution_note ? ` - ${item.substitution_note}` : ""}
                     </small>
                   )}
                 </div>
                 <strong>
-                  <Price value={item.line_total} />
+                  {formatCurrency(item.line_total)}
                 </strong>
               </div>
             ))}
@@ -304,7 +284,7 @@ function OrderConfirmation() {
           <h2>Bill details</h2>
           <div>
             <span>Status</span>
-            <strong>{formatStatus(order.status)}</strong>
+            <strong>{formatLabel(order.status)}</strong>
           </div>
           <div>
             <span>Payment</span>
@@ -312,28 +292,24 @@ function OrderConfirmation() {
           </div>
           <div>
             <span>Payment status</span>
-            <strong>{formatStatus(order.payment_status)}</strong>
+            <strong>{formatLabel(order.payment_status)}</strong>
           </div>
           <div>
             <span>Subtotal</span>
             <strong>
-              <Price value={order.subtotal} />
+              {formatCurrency(order.subtotal)}
             </strong>
           </div>
           <div>
             <span>Delivery</span>
             <strong>
-              {order.delivery_fee === 0 ? (
-                "Free"
-              ) : (
-                <Price value={order.delivery_fee} />
-              )}
+              {order.delivery_fee === 0 ? "Free" : formatCurrency(order.delivery_fee)}
             </strong>
           </div>
           <div className="summary-total">
             <span>Total</span>
             <strong>
-              <Price value={order.total} />
+              {formatCurrency(order.total)}
             </strong>
           </div>
           <Link className="button checkout-button" to="/products">
@@ -377,15 +353,15 @@ function OrderConfirmation() {
           <div className="invoice-grid">
             <span>Subtotal</span>
             <strong>
-              <Price value={invoice.subtotal} />
+              {formatCurrency(invoice.subtotal)}
             </strong>
             <span>Delivery</span>
             <strong>
-              <Price value={invoice.delivery_fee} />
+              {formatCurrency(invoice.delivery_fee)}
             </strong>
             <span>Total</span>
             <strong>
-              <Price value={invoice.total} />
+              {formatCurrency(invoice.total)}
             </strong>
           </div>
         </section>

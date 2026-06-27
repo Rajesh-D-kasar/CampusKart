@@ -72,7 +72,7 @@ function DeliveryDashboard() {
       setOrders(await getDeliveryOrders());
     } catch (deliveryError) {
       setError(
-        deliveryError.response?.data?.detail || "Could not load delivery orders."
+        deliveryError.response?.data?.detail || "We could not load delivery orders."
       );
     } finally {
       setLoading(false);
@@ -94,7 +94,7 @@ function DeliveryDashboard() {
       );
     } catch (deliveryError) {
       setError(
-        deliveryError.response?.data?.detail || "Could not update delivery status."
+        deliveryError.response?.data?.detail || "We could not update delivery status."
       );
     } finally {
       setSaving("");
@@ -158,7 +158,7 @@ function DeliveryDashboard() {
         </article>
       </div>
 
-      {loading && <p className="status-card">Loading delivery orders...</p>}
+      {loading && <p className="status-card">Opening delivery orders...</p>}
       {error && <p className="form-error">{error}</p>}
 
       {!loading && !error && orders.length === 0 && (

@@ -85,7 +85,7 @@ export function CartProvider({ children }) {
         setItems(mapServerCart(latestCart));
         localStorage.removeItem(CART_STORAGE_KEY);
       } catch {
-        setError("Could not sync cart with your account.");
+        setError("We could not sync your cart with this account.");
       } finally {
         setLoading(false);
       }

@@ -38,7 +38,7 @@ function Support() {
       .then(setTickets)
       .catch((supportError) => {
         setError(
-          supportError.response?.data?.detail || "Could not load support tickets."
+          supportError.response?.data?.detail || "We could not load support tickets."
         );
       })
       .finally(() => setLoading(false));
@@ -75,7 +75,7 @@ function Support() {
       setSuccess("Support ticket create ho gaya. Team jaldi update karegi.");
     } catch (supportError) {
       setError(
-        supportError.response?.data?.detail || "Could not create support ticket."
+        supportError.response?.data?.detail || "We could not create this support ticket."
       );
     }
   };
@@ -92,7 +92,7 @@ function Support() {
       setReplyText((current) => ({ ...current, [ticketId]: "" }));
     } catch (supportError) {
       setError(
-        supportError.response?.data?.detail || "Could not send reply."
+        supportError.response?.data?.detail || "We could not send this reply."
       );
     }
   };
@@ -160,7 +160,7 @@ function Support() {
         <section className="checkout-card support-ticket-list">
           <h2>Your tickets</h2>
           {loading ? (
-            <p>Loading support tickets...</p>
+            <p>Opening support tickets...</p>
           ) : tickets.length === 0 ? (
             <p>Abhi koi ticket nahi hai.</p>
           ) : (

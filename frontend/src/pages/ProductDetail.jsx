@@ -69,7 +69,7 @@ function ProductDetail() {
   if (status === "loading") {
     return (
       <section className="container page-section">
-        <p className="status-card">Loading product...</p>
+        <p className="status-card">Fetching product details...</p>
       </section>
     );
   }
@@ -79,7 +79,7 @@ function ProductDetail() {
       <section className="container page-section">
         <div className="status-card error-card">
           <h1>Product nahi mila</h1>
-          <p>This item may be unavailable or inactive right now.</p>
+          <p>This item may be unavailable at the moment.</p>
           <Link className="button" to="/products">
             Back to products
           </Link>

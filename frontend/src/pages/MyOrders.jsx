@@ -3,33 +3,12 @@ import { Link } from "react-router-dom";
 import { getNotifications, markNotificationRead } from "../api/notificationApi";
 import { getOrders } from "../api/orderApi";
 import { useAuth } from "../context/AuthContext";
-
-function Price({ value }) {
-  return (
-    <>
-      {"\u20B9"}
-      {value}
-    </>
-  );
-}
-
-function formatStatus(status) {
-  return status.replaceAll("_", " ");
-}
-
-function formatPaymentMethod(method) {
-  if (method === "upi") return "Mock UPI";
-  if (method === "card") return "Mock card";
-  if (method === "razorpay") return "Razorpay";
-  return "Cash on delivery";
-}
-
-function formatDate(dateValue) {
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
+import {
+  formatCurrency,
+  formatDateTime,
+  formatLabel,
+  formatPaymentMethod,
+} from "../utils/formatters";
 
 function formatEta(order) {
   if (order.status === "cancelled") return "Cancelled";
@@ -59,7 +38,10 @@ function MyOrders() {
         setOrders(orderList);
         setNotifications(notificationList);
       } catch (orderError) {
-        setError(orderError.response?.data?.detail || "Could not load orders.");
+        setError(
+          orderError.response?.data?.detail ||
+            "We couldn't load your orders. Please try again."
+        );
       } finally {
         setLoading(false);
       }
@@ -75,7 +57,7 @@ function MyOrders() {
         current.map((item) => (item.id === notificationId ? notification : item))
       );
     } catch {
-      // Notification read state is non-critical; refresh will retry later.
+      // A missed read receipt should not block the orders page.
     }
   };
 
@@ -92,7 +74,7 @@ function MyOrders() {
       <section className="container auth-page">
         <div className="auth-card">
           <h2>Login required</h2>
-          <p>Please login to view your orders.</p>
+          <p>Login to see your orders, invoices, and delivery updates.</p>
           <Link className="button" to="/login">
             Login to continue
           </Link>
@@ -113,7 +95,7 @@ function MyOrders() {
         </Link>
       </div>
 
-      {loading && <p className="status-card">Loading orders...</p>}
+      {loading && <p className="status-card">Bringing up your orders...</p>}
       {error && <p className="form-error">{error}</p>}
 
       {notifications.length > 0 && (
@@ -144,8 +126,8 @@ function MyOrders() {
       {!loading && !error && orders.length === 0 && (
         <div className="empty-state orders-empty-state">
           <span aria-hidden="true">{"\u{1F9FE}"}</span>
-          <h1>No orders yet</h1>
-          <p>Your placed orders will appear here.</p>
+          <h1>Your first order is waiting</h1>
+          <p>Once you place an order, tracking and invoices will show up here.</p>
           <Link className="button" to="/products">
             Browse products
           </Link>
@@ -157,18 +139,16 @@ function MyOrders() {
           <article className="order-card" key={order.id}>
             <div>
               <span className="order-card-label">Order #{order.order_number}</span>
-              <h2>
-                <Price value={order.total} />
-              </h2>
+              <h2>{formatCurrency(order.total)}</h2>
               <p>
                 {order.item_count} item{order.item_count === 1 ? "" : "s"} -
-                placed {formatDate(order.created_at)}
+                placed {formatDateTime(order.created_at)}
               </p>
               <p className="order-tracking-copy">{order.tracking_message}</p>
             </div>
             <div className="order-card-meta">
               <span className={`status-pill status-${order.status}`}>
-                {formatStatus(order.status)}
+                {formatLabel(order.status)}
               </span>
               <small>{formatEta(order)}</small>
               {order.delivery_partner && (
@@ -178,7 +158,7 @@ function MyOrders() {
                 <small>
                   {order.review
                     ? `Rated ${order.review.overall_rating}/5`
-                    : "Ready for review"}
+                    : "Ready for your review"}
                 </small>
               )}
               <small>{formatPaymentMethod(order.payment_method)}</small>

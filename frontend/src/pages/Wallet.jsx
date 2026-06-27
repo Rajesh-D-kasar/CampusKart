@@ -2,23 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getWallet } from "../api/walletApi";
 import { useAuth } from "../context/AuthContext";
-
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
-
-function formatDate(dateValue) {
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateValue));
-}
-
-function formatTransactionType(type) {
-  return type.replaceAll("_", " ");
-}
+import {
+  formatCurrency,
+  formatDateTime,
+  formatLabel,
+} from "../utils/formatters";
 
 function Wallet() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -38,7 +26,7 @@ function Wallet() {
       } catch (walletError) {
         setError(
           walletError.response?.data?.detail ||
-            "Could not load your wallet right now."
+            "We couldn't load your wallet. Please try again."
         );
       } finally {
         setLoading(false);
@@ -61,7 +49,7 @@ function Wallet() {
       <section className="container auth-page">
         <div className="auth-card">
           <h2>Login required</h2>
-          <p>Please login to view refund credits and wallet history.</p>
+          <p>Login to see refund credits and wallet history.</p>
           <Link className="button" to="/login">
             Login to continue
           </Link>
@@ -87,10 +75,10 @@ function Wallet() {
       <div className="wallet-layout">
         <aside className="wallet-balance-card">
           <span>Available balance</span>
-          <strong>{currencyFormatter.format(wallet.balance)}</strong>
+          <strong>{formatCurrency(wallet.balance)}</strong>
           <p>
-            Paid order cancellations and Razorpay refunds are recorded here as
-            customer wallet credits for clear tracking.
+            Refunds and paid-order cancellations are recorded here, so your
+            credit history stays easy to follow.
           </p>
           <Link className="button" to="/products">
             Shop with CampusKart
@@ -106,11 +94,11 @@ function Wallet() {
             <small>Last 50 transactions</small>
           </div>
 
-          {loading && <p className="status-card">Loading wallet...</p>}
+          {loading && <p className="status-card">Opening your wallet...</p>}
 
           {!loading && wallet.transactions.length === 0 && (
             <div className="wallet-empty-state">
-              <h3>No wallet activity yet</h3>
+              <h3>Wallet is quiet for now</h3>
               <p>
                 Refund credits will appear here after a paid order is cancelled
                 or refunded.
@@ -123,11 +111,11 @@ function Wallet() {
               <article className="wallet-transaction-card" key={transaction.id}>
                 <div>
                   <span className="status-chip">
-                    {formatTransactionType(transaction.transaction_type)}
+                    {formatLabel(transaction.transaction_type)}
                   </span>
                   <h3>{transaction.description}</h3>
                   <p>
-                    {formatDate(transaction.created_at)}
+                    {formatDateTime(transaction.created_at)}
                     {transaction.order_number && (
                       <>
                         {" "}
@@ -141,10 +129,10 @@ function Wallet() {
                 </div>
                 <div className="wallet-transaction-meta">
                   <strong>
-                    +{currencyFormatter.format(transaction.amount)}
+                    +{formatCurrency(transaction.amount)}
                   </strong>
                   <small>
-                    Balance {currencyFormatter.format(transaction.balance_after)}
+                    Balance {formatCurrency(transaction.balance_after)}
                   </small>
                 </div>
               </article>

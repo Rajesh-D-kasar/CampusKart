@@ -6,6 +6,7 @@ import { placeOrder } from "../api/orderApi";
 import { createRazorpayOrder, verifyRazorpayPayment } from "../api/paymentApi";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { formatCurrency } from "../utils/formatters";
 
 const emptyAddressForm = {
   label: "Home",
@@ -27,13 +28,13 @@ const paymentMethods = [
   },
   {
     id: "upi",
-    title: "Mock UPI",
-    description: "Instant test payment, marked paid after order placement.",
+    title: "UPI (demo)",
+    description: "Instant demo payment, marked paid after order placement.",
   },
   {
     id: "card",
-    title: "Mock card",
-    description: "Use the test flow to simulate card success or failure.",
+    title: "Card (demo)",
+    description: "Use the demo flow to simulate card success or failure.",
   },
   {
     id: "razorpay",
@@ -42,14 +43,6 @@ const paymentMethods = [
   },
 ];
 
-function Price({ value }) {
-  return (
-    <>
-      {"\u20B9"}
-      {value}
-    </>
-  );
-}
 
 function loadRazorpayScript() {
   if (window.Razorpay) return Promise.resolve();
@@ -57,7 +50,7 @@ function loadRazorpayScript() {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = resolve;
-    script.onerror = () => reject(new Error("Could not load Razorpay checkout."));
+    script.onerror = () => reject(new Error("Razorpay checkout did not load."));
     document.body.appendChild(script);
   });
 }
@@ -97,7 +90,7 @@ function Checkout() {
         }
       } catch (addressError) {
         setError(
-          addressError.response?.data?.detail || "Could not load addresses."
+          addressError.response?.data?.detail || "We could not load your saved addresses."
         );
       } finally {
         setLoadingAddresses(false);
@@ -179,7 +172,7 @@ function Checkout() {
       }
 
       if (!addressId) {
-        throw new Error("Please select or add an address.");
+        throw new Error("Select or add a delivery address.");
       }
 
       if (paymentMethod === "razorpay") {
@@ -222,7 +215,7 @@ function Checkout() {
           razorpay_signature: razorpayPayment.razorpay_signature,
         });
         if (!verification.verified) {
-          throw new Error("Payment verification failed. Please contact support.");
+          throw new Error("Payment verification failed. Contact support if money was debited.");
         }
       }
 
@@ -247,7 +240,7 @@ function Checkout() {
       setError(
         checkoutError.response?.data?.detail ||
           checkoutError.message ||
-          "Could not place order."
+          "We could not place your order."
       );
     } finally {
       setIsSubmitting(false);
@@ -267,7 +260,7 @@ function Checkout() {
       <section className="container auth-page">
         <div className="auth-card">
           <h2>Login required</h2>
-          <p>Please login before checkout so we can save your order.</p>
+          <p>Login before checkout so we can save and track your order.</p>
           <Link className="button" to="/login">
             Login to continue
           </Link>
@@ -307,7 +300,7 @@ function Checkout() {
       <form className="checkout-layout" onSubmit={handleSubmit}>
         <div className="checkout-card">
           <h2>Delivery address</h2>
-          {loadingAddresses && <p>Loading saved addresses...</p>}
+          {loadingAddresses && <p>Getting your saved addresses...</p>}
 
           {addresses.length > 0 && (
             <div className="address-list">
@@ -470,8 +463,8 @@ function Checkout() {
             </label>
           )}
           <p className="payment-note">
-            Razorpay uses real checkout only when backend keys are configured.
-            Mock UPI/card stay available for local testing.
+            Razorpay uses the real checkout when backend keys are configured.
+            Demo UPI/card stay available for local testing.
           </p>
           {coupons.length > 0 && (
             <section className="coupon-box">
@@ -512,7 +505,7 @@ function Checkout() {
               {appliedCoupon && (
                 <p className="coupon-success">
                   {appliedCoupon.code} applied. You save{" "}
-                  <Price value={appliedCoupon.savings} />.
+                  {formatCurrency(appliedCoupon.savings)}.
                 </p>
               )}
               {couponError && <p className="coupon-error">{couponError}</p>}
@@ -530,31 +523,27 @@ function Checkout() {
           <div>
             <span>Subtotal</span>
             <strong>
-              <Price value={total} />
+              {formatCurrency(total)}
             </strong>
           </div>
           <div>
             <span>Delivery</span>
             <strong>
-              {payableDeliveryFee === 0 ? (
-                "Free"
-              ) : (
-                <Price value={payableDeliveryFee} />
-              )}
+              {payableDeliveryFee === 0 ? "Free" : formatCurrency(payableDeliveryFee)}
             </strong>
           </div>
           {payableDiscount > 0 && (
             <div>
               <span>Coupon discount</span>
               <strong>
-                -<Price value={payableDiscount} />
+                -{formatCurrency(payableDiscount)}
               </strong>
             </div>
           )}
           <div className="summary-total">
             <span>Total</span>
             <strong>
-              <Price value={payableTotal} />
+              {formatCurrency(payableTotal)}
             </strong>
           </div>
           <button className="button checkout-button" disabled={isSubmitting}>
